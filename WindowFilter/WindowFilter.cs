@@ -102,7 +102,7 @@ internal sealed class WindowFilter
 
             Demote(hwnd);
             SendBack(hwnd, t.Applied);
-            Log.Line($"guard demote: process={t.Process} title={t.Title} method={t.Applied}");
+            Logger.Line($"guard demote: process={t.Process} title={t.Title} method={t.Applied}");
         }
     }
 
@@ -139,7 +139,7 @@ internal sealed class WindowFilter
             {
                 if (!IsWindow(t.Hwnd))
                 {
-                    Log.Line($"guard restore: process={t.Process} title={t.Title} (gone)");
+                    Logger.Line($"guard restore: process={t.Process} title={t.Title} (gone)");
                     continue;
                 }
 
@@ -158,7 +158,7 @@ internal sealed class WindowFilter
                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
                 }
 
-                Log.Line($"guard restore: process={t.Process} title={t.Title}");
+                Logger.Line($"guard restore: process={t.Process} title={t.Title}");
             }
 
             _tracked.Clear();

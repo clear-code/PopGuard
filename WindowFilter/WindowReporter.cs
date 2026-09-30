@@ -21,7 +21,7 @@ internal sealed class WindowReporter
             return;
         }
 
-        Log.Line($"window {kind}: process={process} title={title}");
+        Logger.Line($"window {kind}: process={process} title={title}");
     }
 
     private bool IsDuplicate(string key)

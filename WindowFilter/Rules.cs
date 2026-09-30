@@ -164,7 +164,7 @@ internal static class RulesStore
         if (!File.Exists(FilePath))
         {
             TryWriteSample();
-            Log.Line("rules: ファイルが無いためサンプルを生成しました。何も抑止しません。 path=" + FilePath);
+            Logger.Line("rules: ファイルが無いためサンプルを生成しました。何も抑止しません。 path=" + FilePath);
             return new List<TargetRule>();
         }
 
@@ -175,7 +175,7 @@ internal static class RulesStore
         }
         catch (Exception ex)
         {
-            Log.Line("rules: JSON の読み込みに失敗しました（何も抑止しません）: " + ex.Message);
+            Logger.Line("rules: JSON の読み込みに失敗しました（何も抑止しません）: " + ex.Message);
             return new List<TargetRule>();
         }
 
@@ -195,14 +195,14 @@ internal static class RulesStore
             if (rule is null)
             {
                 invalid++;
-                Log.Line("rules: 無効なルールを飛ばしました（" + reason + "）");
+                Logger.Line("rules: 無効なルールを飛ばしました（" + reason + "）");
                 continue;
             }
 
             rules.Add(rule);
         }
 
-        Log.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} path={FilePath}");
+        Logger.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} path={FilePath}");
         return rules;
     }
 

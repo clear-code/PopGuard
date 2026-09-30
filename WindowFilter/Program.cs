@@ -16,21 +16,21 @@ internal static class Program
             try { guard.RestoreAll(); } catch { /* 復元失敗は無視 */ }
         };
 
-        Log.Line("WindowFilter: starting");
+        Logger.Line("WindowFilter: starting");
 
         try
         {
             var reporter = new WindowReporter();
             var poller = new TopLevelPoller(reporter, guard);
             poller.Start();
-            Log.Line("WindowFilter: started");
+            Logger.Line("WindowFilter: started");
 
             // トップレベル列挙は別スレッド（Timer）で動く。メインスレッドは常駐のため待機し続ける。
             new ManualResetEvent(false).WaitOne();
         }
         catch (Exception ex)
         {
-            Log.Line("WindowFilter: fatal " + ex);
+            Logger.Line("WindowFilter: fatal " + ex);
             guard.RestoreAll();
         }
     }
