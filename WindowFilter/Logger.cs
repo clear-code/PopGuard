@@ -62,7 +62,6 @@ internal sealed class Logger
     private static string DefaultDirectory() =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Chronos",
             "WindowFilter");
 
     private static void NoException(Action func)
