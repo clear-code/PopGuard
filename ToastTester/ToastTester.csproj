@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 本物の OS トースト（WinRT / CommunityToolkit）を使うため Windows 10 系 TFM にする -->
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>ToastTester</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 非パッケージの Win32 アプリからでも OS トーストを出せる（AUMID 登録を肩代わりしてくれる） -->
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+  </ItemGroup>
+
+</Project>
