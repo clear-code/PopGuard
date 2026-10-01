@@ -11,11 +11,11 @@ namespace WindowFilter;
 /// </summary>
 internal sealed class TrayContext : ApplicationContext
 {
-    // メニューの「状態:」テキスト色（メニュー背景で読みやすいよう濃いめ）。
+    // メニューの「状態:」テキスト色
     private static readonly Color ActiveTextColor = Color.FromArgb(0, 128, 0);     // 緑
     private static readonly Color InactiveTextColor = Color.FromArgb(105, 105, 105); // 灰
 
-    // 「状態:」の横に出す ● の色（抑止中=緑 / 非抑止=灰）。
+    // 「状態:」の横に出す丸の色（抑止中=緑 / 非抑止=灰）
     private static readonly Color ActiveDotColor = Color.FromArgb(46, 204, 113);
     private static readonly Color InactiveDotColor = Color.FromArgb(150, 150, 150);
 
@@ -25,11 +25,11 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _stopItem;
     private readonly System.Windows.Forms.Timer _uiTimer;
 
-    // 事前に用意して exe に埋め込んだアイコン（抑止中=緑 / 非抑止=灰）を読み込む。
+    // 事前に用意して exe に埋め込んだアイコン（抑止中=緑 / 非抑止=灰）を読み込む
     private readonly Icon _activeIcon;
     private readonly Icon _inactiveIcon;
 
-    // メニュー「状態:」項目に付ける 16px アイコン（埋め込みアイコンから抽出）。
+    // メニュー「状態:」項目に付ける 16px アイコン（埋め込みアイコンから抽出）
     private readonly Bitmap _activeDot;
     private readonly Bitmap _inactiveDot;
 

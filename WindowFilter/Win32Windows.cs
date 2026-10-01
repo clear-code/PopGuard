@@ -5,8 +5,7 @@ namespace WindowFilter;
 
 /// <summary>
 /// Win32 でトップレベルウィンドウを列挙・情報取得するヘルパー。
-/// EnumWindows は OS の全トップレベルウィンドウを返すため、非アクティブ化ポップアップや
-/// トースト（Thunderbird の通知など）も取りこぼさない。
+/// EnumWindows は OS の全トップレベルウィンドウを返すため、非アクティブ化ポップアップも取得する。
 /// </summary>
 internal static class Win32Windows
 {
