@@ -2,12 +2,23 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <!-- FocusSessionManager（Windows.UI.Shell, Win11 22H2/22621+）の WinRT 射影を使うため Win11 SDK 系でビルド -->
+    <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
+    <!-- 実際に対応する最小 OS は Windows 10（フォーカス連動のみ 22621+ で、実行時にバージョンガード） -->
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WindowFilter</AssemblyName>
     <!-- タスクトレイ常駐（NotifyIcon）のために WinForms を使う -->
     <UseWindowsForms>true</UseWindowsForms>
+    <!-- exe 本体のアイコン（エクスプローラー／タスクバー表示用） -->
+    <ApplicationIcon>WindowFilter.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <!-- トレイ用アイコン（抑止中=緑 / 非抑止=灰）を exe に埋め込む -->
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\tray_active.ico" />
+    <EmbeddedResource Include="Assets\tray_inactive.ico" />
+  </ItemGroup>
 
 </Project>

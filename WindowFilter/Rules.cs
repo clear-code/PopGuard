@@ -12,6 +12,9 @@ internal sealed class RuleFile
 
     // トレイメニューに出す「抑止時間」の候補。省略時は既定の候補を使う。
     public List<DurationEntry>? Durations { get; set; }
+
+    // Windows 11 のフォーカス セッション中に自動で抑止するか（省略時 true）。
+    public bool? AutoSuppressDuringFocus { get; set; }
 }
 
 /// <summary>抑止時間の候補 1 件分（JSON）。minutes が 0 以下なら「無制限」。</summary>
@@ -39,11 +42,16 @@ internal sealed class AppConfig
 {
     public IReadOnlyList<TargetRule> Rules { get; }
     public IReadOnlyList<DurationOption> Durations { get; }
+    public bool AutoSuppressDuringFocus { get; }
 
-    public AppConfig(IReadOnlyList<TargetRule> rules, IReadOnlyList<DurationOption> durations)
+    public AppConfig(
+        IReadOnlyList<TargetRule> rules,
+        IReadOnlyList<DurationOption> durations,
+        bool autoSuppressDuringFocus)
     {
         Rules = rules;
         Durations = durations;
+        AutoSuppressDuringFocus = autoSuppressDuringFocus;
     }
 }
 
@@ -201,7 +209,7 @@ internal static class RulesStore
         {
             TryWriteSample();
             Logger.Line("rules: ファイルが無いためサンプルを生成しました。何も抑止しません。 path=" + FilePath);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations());
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true);
         }
 
         RuleFile? file;
@@ -212,7 +220,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: JSON の読み込みに失敗しました（何も抑止しません）: " + ex.Message);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations());
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true);
         }
 
         var rules = new List<TargetRule>();
@@ -239,9 +247,10 @@ internal static class RulesStore
         }
 
         IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
+        bool autoFocus = file?.AutoSuppressDuringFocus ?? true;
 
-        Logger.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} 時間候補={durations.Count} path={FilePath}");
-        return new AppConfig(rules, durations);
+        Logger.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} 時間候補={durations.Count} フォーカス連動={autoFocus} path={FilePath}");
+        return new AppConfig(rules, durations, autoFocus);
     }
 
     /// <summary>設定の候補をコンパイルする。空／未指定なら既定の候補を使う。</summary>
@@ -317,6 +326,8 @@ internal static class RulesStore
                     new() { Label = "一日", Minutes = 1440 },
                     new() { Label = "無制限", Minutes = 0 },
                 },
+                // Windows 11 のフォーカス セッション中は自動で抑止する（手動の応答不可は対象外）。
+                AutoSuppressDuringFocus = true,
             };
 
             var options = new JsonSerializerOptions

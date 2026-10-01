@@ -42,6 +42,7 @@ internal sealed class WindowFilter
     // ポーリング（Timer スレッド）の両方から触るため _stateLock で保護する。
     private readonly object _stateLock = new();
     private DateTime? _activeUntil;
+    private bool _autoActive; // フォーカス連動で自動的に有効化したか
 
     public WindowFilter(IReadOnlyList<TargetRule> rules) => _rules = rules;
 
@@ -69,12 +70,25 @@ internal sealed class WindowFilter
         }
     }
 
-    /// <summary>抑止を有効にする。<paramref name="duration"/> が null なら無制限。</summary>
+    /// <summary>現在の抑止がフォーカス連動による自動抑止か。表示用。</summary>
+    public bool IsAutoActive
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _autoActive && _activeUntil.HasValue;
+            }
+        }
+    }
+
+    /// <summary>抑止を手動で有効にする。<paramref name="duration"/> が null なら無制限。</summary>
     public void Activate(TimeSpan? duration)
     {
         lock (_stateLock)
         {
             _activeUntil = duration is { } d ? DateTime.UtcNow + d : DateTime.MaxValue;
+            _autoActive = false; // 手動操作
         }
         Logger.Line(duration is { } dd
             ? $"guard: 抑止を開始（{dd.TotalMinutes:0} 分）"
@@ -89,11 +103,52 @@ internal sealed class WindowFilter
         {
             wasActive = _activeUntil.HasValue;
             _activeUntil = null;
+            _autoActive = false;
         }
         if (wasActive)
         {
             RestoreAll();
             Logger.Line($"guard: 抑止を終了（{reason}）");
+        }
+    }
+
+    /// <summary>
+    /// フォーカス（フォーカス セッション）の状態変化を受けて自動抑止を切り替える。
+    /// 自動で始めた抑止だけ自動で解除し、手動の抑止は尊重する。
+    /// </summary>
+    public void OnFocusChanged(bool focusActive)
+    {
+        bool started = false;
+        bool ended = false;
+        lock (_stateLock)
+        {
+            if (focusActive)
+            {
+                // 抑止していなければ、フォーカス終了まで自動で抑止する。
+                if (_activeUntil is null)
+                {
+                    _activeUntil = DateTime.MaxValue;
+                    _autoActive = true;
+                    started = true;
+                }
+            }
+            else if (_autoActive)
+            {
+                // 自動で始めたものだけ解除（手動はそのまま）。
+                _activeUntil = null;
+                _autoActive = false;
+                ended = true;
+            }
+        }
+
+        if (started)
+        {
+            Logger.Line("guard: 抑止を開始（フォーカス中）");
+        }
+        if (ended)
+        {
+            RestoreAll();
+            Logger.Line("guard: 抑止を終了（フォーカス終了）");
         }
     }
 
@@ -107,6 +162,7 @@ internal sealed class WindowFilter
             if (expired)
             {
                 _activeUntil = null;
+                _autoActive = false;
             }
         }
         if (expired)

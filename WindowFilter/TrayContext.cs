@@ -1,5 +1,5 @@
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace WindowFilter;
@@ -10,11 +10,7 @@ namespace WindowFilter;
 /// </summary>
 internal sealed class TrayContext : ApplicationContext
 {
-    // 抑止中/非抑止を色で示すアイコン（実行時に描画）。
-    private static readonly Color ActiveColor = Color.FromArgb(46, 204, 113);   // 緑: 抑止中
-    private static readonly Color InactiveColor = Color.FromArgb(150, 150, 150); // 灰: 抑止していない
-
-    // メニューの「状態:」テキスト色（メニュー背景で読みやすいよう、アイコンより濃いめ）。
+    // メニューの「状態:」テキスト色（メニュー背景で読みやすいよう濃いめ）。
     private static readonly Color ActiveTextColor = Color.FromArgb(0, 128, 0);     // 緑
     private static readonly Color InactiveTextColor = Color.FromArgb(105, 105, 105); // 灰
 
@@ -24,12 +20,11 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _stopItem;
     private readonly System.Windows.Forms.Timer _uiTimer;
 
+    // 事前に用意して exe に埋め込んだアイコン（抑止中=緑 / 非抑止=灰）を読み込む。
     private readonly Icon _activeIcon;
     private readonly Icon _inactiveIcon;
-    private IntPtr _activeHandle;
-    private IntPtr _inactiveHandle;
 
-    // メニュー「状態:」項目に付ける色付きの丸（有効項目なので色が出る）。
+    // メニュー「状態:」項目に付ける 16px アイコン（埋め込みアイコンから抽出）。
     private readonly Bitmap _activeDot;
     private readonly Bitmap _inactiveDot;
 
@@ -39,10 +34,10 @@ internal sealed class TrayContext : ApplicationContext
     {
         _guard = guard;
 
-        _activeIcon = MakeDotIcon(ActiveColor, out _activeHandle);
-        _inactiveIcon = MakeDotIcon(InactiveColor, out _inactiveHandle);
-        _activeDot = MakeDotBitmap(ActiveColor, 16);
-        _inactiveDot = MakeDotBitmap(InactiveColor, 16);
+        _activeIcon = LoadIcon("tray_active.ico");
+        _inactiveIcon = LoadIcon("tray_inactive.ico");
+        _activeDot = new Icon(_activeIcon, new Size(16, 16)).ToBitmap();
+        _inactiveDot = new Icon(_inactiveIcon, new Size(16, 16)).ToBitmap();
 
         // 無効（Enabled=false）だとテキスト色が効かないため、有効のままにしてクリックは無処理。
         _statusItem = new ToolStripMenuItem("状態: 抑止していません");
@@ -112,6 +107,7 @@ internal sealed class TrayContext : ApplicationContext
         // テキストは有限の抑止中のみ毎秒変わる。固定文言の再代入は setter 側で無視される。
         string text = until switch
         {
+            { } when _guard.IsAutoActive => "抑止中（フォーカス中）",
             { } u when u == DateTime.MaxValue => "抑止中（無制限）",
             { } u => $"抑止中（残り {Remaining(u)}）",
             _ => "抑止していません",
@@ -120,38 +116,22 @@ internal sealed class TrayContext : ApplicationContext
         _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
     }
 
-    /// <summary>指定色の丸を描いたビットマップ（メニュー項目の画像用）。</summary>
-    private static Bitmap MakeDotBitmap(Color color, int size)
+    /// <summary>exe に埋め込んだアイコン（Assets\*.ico）を名前で読み込む。</summary>
+    private static Icon LoadIcon(string fileName)
     {
-        var bmp = new Bitmap(size, size);
-        using Graphics g = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.Clear(Color.Transparent);
-        int m = 2;
-        int d = size - (m * 2) - 1;
-        using var brush = new SolidBrush(color);
-        g.FillEllipse(brush, m, m, d, d);
-        using var pen = new Pen(Color.FromArgb(90, 0, 0, 0), 1.5f);
-        g.DrawEllipse(pen, m, m, d, d);
-        return bmp;
-    }
+        Assembly asm = Assembly.GetExecutingAssembly();
+        string? name = Array.Find(
+            asm.GetManifestResourceNames(),
+            n => n.EndsWith("." + fileName, StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>指定色の丸を描いたトレイ用アイコンを生成する。handle は後で DestroyIcon する。</summary>
-    private static Icon MakeDotIcon(Color color, out IntPtr handle)
-    {
-        using var bmp = new Bitmap(32, 32);
-        using (Graphics g = Graphics.FromImage(bmp))
+        if (name is null)
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Color.Transparent);
-            using var brush = new SolidBrush(color);
-            g.FillEllipse(brush, 3, 3, 26, 26);
-            using var pen = new Pen(Color.FromArgb(90, 0, 0, 0), 2f);
-            g.DrawEllipse(pen, 3, 3, 26, 26);
+            Logger.Line("tray: アイコンリソースが見つかりません: " + fileName);
+            return SystemIcons.Application;
         }
 
-        handle = bmp.GetHicon();
-        return Icon.FromHandle(handle);
+        using Stream? stream = asm.GetManifestResourceStream(name);
+        return stream is not null ? new Icon(stream) : SystemIcons.Application;
     }
 
     private static string Remaining(DateTime untilUtc)
@@ -185,16 +165,6 @@ internal sealed class TrayContext : ApplicationContext
             _inactiveIcon.Dispose();
             _activeDot.Dispose();
             _inactiveDot.Dispose();
-            if (_activeHandle != IntPtr.Zero)
-            {
-                NativeMethods.DestroyIcon(_activeHandle);
-                _activeHandle = IntPtr.Zero;
-            }
-            if (_inactiveHandle != IntPtr.Zero)
-            {
-                NativeMethods.DestroyIcon(_inactiveHandle);
-                _inactiveHandle = IntPtr.Zero;
-            }
         }
         base.Dispose(disposing);
     }

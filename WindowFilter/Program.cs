@@ -27,9 +27,14 @@ internal static class Program
             var reporter = new WindowReporter();
             var poller = new TopLevelPoller(reporter, guard);
             poller.Start();
+
+            // フォーカス セッション連動（STA スレッドで購読。イベントで自動抑止）。
+            var focus = new FocusSessionWatcher(guard, config.AutoSuppressDuringFocus);
+            focus.Start();
+
             Logger.Line("WindowFilter: started");
 
-            // タスクトレイに常駐。抑止は既定オフで、メニューから期限付きに有効化する。
+            // タスクトレイに常駐。抑止は手動（メニュー）＋フォーカス連動で有効化される。
             ApplicationConfiguration.Initialize();
             Application.Run(new TrayContext(guard, config.Durations));
 
