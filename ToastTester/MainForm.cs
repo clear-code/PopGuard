@@ -17,14 +17,14 @@ internal sealed class MainForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(320, 150);
+        ClientSize = new Size(320, 200);
 
         var show = new Button
         {
             Text = "自前トーストを表示",
             Left = 16,
             Top = 16,
-            Width = 180,
+            Width = 220,
             Height = 32,
         };
         show.Click += (_, _) => ShowToast();
@@ -35,18 +35,29 @@ internal sealed class MainForm : Form
             Text = "OS トースト（本物）を表示",
             Left = 16,
             Top = 56,
-            Width = 180,
+            Width = 220,
             Height = 32,
         };
         showOs.Click += (_, _) => ShowOsToast();
         Controls.Add(showOs);
+
+        var showModal = new Button
+        {
+            Text = "モーダルウィンドウを表示（TOPMOST）",
+            Left = 16,
+            Top = 96,
+            Width = 220,
+            Height = 32,
+        };
+        showModal.Click += (_, _) => ShowModal();
+        Controls.Add(showModal);
 
         var auto = new CheckBox
         {
             Text = "3秒ごとに自前トーストを自動表示",
             AutoSize = true,
             Left = 16,
-            Top = 104,
+            Top = 148,
         };
         auto.CheckedChanged += (_, _) =>
         {
@@ -91,5 +102,15 @@ internal sealed class MainForm : Form
             MessageBox.Show(this, "OS トーストの表示に失敗しました:\n" + ex.Message,
                 "ToastTester", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+    }
+
+    /// <summary>
+    /// モーダルウィンドウを表示する。ShowDialog でオーナー（このウィンドウ）が無効化され、
+    /// かつ TOPMOST なので、WindowFilter のモーダル回避ガードの確認に使える。
+    /// </summary>
+    private void ShowModal()
+    {
+        using var dlg = new ModalForm();
+        dlg.ShowDialog(this);
     }
 }
