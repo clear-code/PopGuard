@@ -33,7 +33,7 @@ internal sealed class TrayContext : ApplicationContext
     private readonly Bitmap _activeDot;
     private readonly Bitmap _inactiveDot;
 
-    private bool _lastActive;
+    private bool? _lastActive; // 初回は必ず反映させるため null 始まり
 
     public TrayContext(WindowFilter guard, IReadOnlyList<DurationOption> durations)
     {
@@ -99,32 +99,25 @@ internal sealed class TrayContext : ApplicationContext
         DateTime? until = _guard.ActiveUntilUtc;
         bool active = until.HasValue;
 
-        if (until is { } u)
-        {
-            string text = u == DateTime.MaxValue
-                ? "抑止中（無制限）"
-                : $"抑止中（残り {Remaining(u)}）";
-            _statusItem.Text = "状態: " + text;
-            _notifyIcon.Text = "WindowFilter — " + text;
-            _stopItem.Enabled = true;
-        }
-        else
-        {
-            _statusItem.Text = "状態: 抑止していません";
-            _notifyIcon.Text = "WindowFilter";
-            _stopItem.Enabled = false;
-        }
-
-        // 「状態:」項目も色分けする（テキスト色＋色付きの丸）。
-        _statusItem.ForeColor = active ? ActiveTextColor : InactiveTextColor;
-        _statusItem.Image = active ? _activeDot : _inactiveDot;
-
-        // 状態が変わったときだけトレイアイコンを差し替える（緑=抑止中 / 灰=非抑止）。
-        if (active != _lastActive)
+        // 色・画像・アイコン・停止ボタンは「状態が変わったとき」だけ更新する（毎秒の代入を避ける）。
+        if (_lastActive != active)
         {
             _notifyIcon.Icon = active ? _activeIcon : _inactiveIcon;
+            _statusItem.ForeColor = active ? ActiveTextColor : InactiveTextColor;
+            _statusItem.Image = active ? _activeDot : _inactiveDot;
+            _stopItem.Enabled = active;
             _lastActive = active;
         }
+
+        // テキストは有限の抑止中のみ毎秒変わる。固定文言の再代入は setter 側で無視される。
+        string text = until switch
+        {
+            { } u when u == DateTime.MaxValue => "抑止中（無制限）",
+            { } u => $"抑止中（残り {Remaining(u)}）",
+            _ => "抑止していません",
+        };
+        _statusItem.Text = "状態: " + text;
+        _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
     }
 
     /// <summary>指定色の丸を描いたビットマップ（メニュー項目の画像用）。</summary>
