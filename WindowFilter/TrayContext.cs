@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -13,6 +14,10 @@ internal sealed class TrayContext : ApplicationContext
     // メニューの「状態:」テキスト色（メニュー背景で読みやすいよう濃いめ）。
     private static readonly Color ActiveTextColor = Color.FromArgb(0, 128, 0);     // 緑
     private static readonly Color InactiveTextColor = Color.FromArgb(105, 105, 105); // 灰
+
+    // 「状態:」の横に出す ● の色（抑止中=緑 / 非抑止=灰）。
+    private static readonly Color ActiveDotColor = Color.FromArgb(46, 204, 113);
+    private static readonly Color InactiveDotColor = Color.FromArgb(150, 150, 150);
 
     private readonly WindowFilter _guard;
     private readonly NotifyIcon _notifyIcon;
@@ -36,8 +41,8 @@ internal sealed class TrayContext : ApplicationContext
 
         _activeIcon = LoadIcon("tray_active.ico");
         _inactiveIcon = LoadIcon("tray_inactive.ico");
-        _activeDot = new Icon(_activeIcon, new Size(16, 16)).ToBitmap();
-        _inactiveDot = new Icon(_inactiveIcon, new Size(16, 16)).ToBitmap();
+        _activeDot = MakeDotBitmap(ActiveDotColor, 16);
+        _inactiveDot = MakeDotBitmap(InactiveDotColor, 16);
 
         // 無効（Enabled=false）だとテキスト色が効かないため、有効のままにしてクリックは無処理。
         _statusItem = new ToolStripMenuItem("状態: 抑止していません");
@@ -114,6 +119,20 @@ internal sealed class TrayContext : ApplicationContext
         };
         _statusItem.Text = "状態: " + text;
         _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
+    }
+
+    /// <summary>「状態:」の横に付ける色付きの ●（メニュー項目の画像用）。</summary>
+    private static Bitmap MakeDotBitmap(Color color, int size)
+    {
+        var bmp = new Bitmap(size, size);
+        using Graphics g = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.Clear(Color.Transparent);
+        int m = 2;
+        int d = size - (m * 2) - 1;
+        using var brush = new SolidBrush(color);
+        g.FillEllipse(brush, m, m, d, d);
+        return bmp;
     }
 
     /// <summary>exe に埋め込んだアイコン（Assets\*.ico）を名前で読み込む。</summary>
