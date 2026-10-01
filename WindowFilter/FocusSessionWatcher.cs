@@ -1,16 +1,16 @@
 namespace WindowFilter;
 
 /// <summary>
-/// Windows 11 のフォーカス（フォーカス セッション）の状態を購読し、変化を <see cref="WindowFilter"/> に伝える。
-/// 自動抑止が有効なら、フォーカス中は抑止を自動 ON、終了で自動 OFF にする（手動操作は尊重）。
-/// 手動の「応答不可（Do Not Disturb）」単体では IsFocusActive は変化しないため対象外。
+/// Subscribes to the Windows 11 focus (focus session) state and relays changes to <see cref="WindowFilter"/>.
+/// When auto-suppress is enabled, suppression is turned on while focus is active and off when it ends
+/// (manual actions are respected). Manual "Do Not Disturb" alone does not change IsFocusActive, so it is not covered.
 /// </summary>
 internal sealed class FocusSessionWatcher
 {
     private readonly WindowFilter _guard;
     private readonly bool _autoSuppress;
 
-    // イベント購読を保持するため参照を持ち続ける（GC 回収防止）。
+    // Hold the reference so the event subscription is not collected by GC.
     private Windows.UI.Shell.FocusSessionManager? _manager;
 
     public FocusSessionWatcher(WindowFilter guard, bool autoSuppress)
@@ -19,14 +19,14 @@ internal sealed class FocusSessionWatcher
         _autoSuppress = autoSuppress;
     }
 
-    /// <summary>購読を開始する。メッセージポンプのある STA スレッドで呼ぶこと。</summary>
+    /// <summary>Start subscribing. Must be called on an STA thread with a message pump.</summary>
     public void Start()
     {
-        // FocusSessionManager は Windows 11 22H2(22621) で追加。古い OS では型自体が無いので、
-        // 触れる前に OS バージョンでガードする（例外に頼らず綺麗にスキップ）。
+        // FocusSessionManager was added in Windows 11 22H2 (22621). The type is absent on older OSes,
+        // so guard by OS version before touching it (skip cleanly instead of relying on exceptions).
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
         {
-            Logger.Line("focus-session: この Windows では未対応（22H2/22621 未満）。フォーカス連動なしで動作します。");
+            Logger.Line("focus-session: not supported on this Windows (< 22H2/22621). Running without focus sync.");
             return;
         }
 
@@ -34,7 +34,7 @@ internal sealed class FocusSessionWatcher
         {
             if (!Windows.UI.Shell.FocusSessionManager.IsSupported)
             {
-                Logger.Line("focus-session: この端末では未対応（IsSupported=false）");
+                Logger.Line("focus-session: not supported on this device (IsSupported=false)");
                 return;
             }
 
@@ -44,7 +44,7 @@ internal sealed class FocusSessionWatcher
 
             _manager.IsFocusActiveChanged += OnFocusActiveChanged;
 
-            // 起動時すでにフォーカス中なら反映する。
+            // If focus is already active at startup, reflect it.
             if (_autoSuppress && active)
             {
                 _guard.OnFocusChanged(true);
@@ -52,7 +52,7 @@ internal sealed class FocusSessionWatcher
         }
         catch (Exception ex)
         {
-            Logger.Line("focus-session: 取得・購読に失敗: " + ex.Message);
+            Logger.Line("focus-session: failed to query/subscribe: " + ex.Message);
         }
     }
 

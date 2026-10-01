@@ -4,20 +4,20 @@ using static WindowFilter.NativeMethods;
 
 namespace WindowFilter;
 
-/// <summary>どかし方。</summary>
+/// <summary>How a matched window is pushed out of the way.</summary>
 internal enum HideMethod
 {
-    Bottom,   // Z オーダーの最背面へ送る（最も影響が小さく、確実に戻せる）
-    Minimize, // 最小化
-    Hide,     // 非表示
+    Bottom,   // Send to the back of the Z order (least disruptive, reliably restorable)
+    Minimize, // Minimize
+    Hide,     // Hide
 }
 
 /// <summary>
-/// ルールに一致したウィンドウを裏へ送り、追跡しておき、終了・異常時に必ず元へ戻す。
-/// TOPMOST を条件にするかはルールごとに設定できる（TopMostOnly）。
+/// Pushes rule-matched windows to the back, tracks them, and always restores them on exit/failure.
+/// Whether TOPMOST is required can be configured per rule (TopMostOnly).
 ///
-/// 呼び出す Win32 API は SetWindowPos / ShowWindowAsync のみ。
-/// プロセス停止・ファイル/レジストリ変更は一切行わない。
+/// The only Win32 APIs called are SetWindowPos / ShowWindowAsync.
+/// It never kills processes or modifies files/registry.
 /// </summary>
 internal sealed class WindowFilter
 {
@@ -35,18 +35,18 @@ internal sealed class WindowFilter
     private readonly object _lock = new();
     private readonly Dictionary<IntPtr, Tracked> _tracked = new();
 
-    // モーダルとみなして対象外にした HWND（同じものを毎回ログしないための記録）。_lock で保護する。
+    // HWNDs skipped as modal (recorded so we don't log the same one every tick). Guarded by _lock.
     private readonly HashSet<IntPtr> _skippedModal = new();
 
-    // 抑止の有効期限（UTC）。null なら抑止していない。トレイ操作（UI スレッド）と
-    // ポーリング（Timer スレッド）の両方から触るため _stateLock で保護する。
+    // Suppression expiry (UTC). null means not suppressing. Touched by both the tray (UI thread)
+    // and the poller (timer thread), so it is guarded by _stateLock.
     private readonly object _stateLock = new();
     private DateTime? _activeUntil;
-    private bool _autoActive; // フォーカス連動で自動的に有効化したか
+    private bool _autoActive; // whether activation came from focus-session sync
 
     public WindowFilter(IReadOnlyList<TargetRule> rules) => _rules = rules;
 
-    /// <summary>抑止が現在有効か。</summary>
+    /// <summary>Whether suppression is currently active.</summary>
     public bool IsActive
     {
         get
@@ -58,7 +58,7 @@ internal sealed class WindowFilter
         }
     }
 
-    /// <summary>抑止の有効期限（UTC）。無効なら null。表示用。</summary>
+    /// <summary>Suppression expiry (UTC), or null if inactive. For display.</summary>
     public DateTime? ActiveUntilUtc
     {
         get
@@ -70,7 +70,7 @@ internal sealed class WindowFilter
         }
     }
 
-    /// <summary>現在の抑止がフォーカス連動による自動抑止か。表示用。</summary>
+    /// <summary>Whether the current suppression was auto-activated by focus-session sync. For display.</summary>
     public bool IsAutoActive
     {
         get
@@ -82,20 +82,20 @@ internal sealed class WindowFilter
         }
     }
 
-    /// <summary>抑止を手動で有効にする。<paramref name="duration"/> が null なら無制限。</summary>
+    /// <summary>Activate suppression manually. A null <paramref name="duration"/> means unlimited.</summary>
     public void Activate(TimeSpan? duration)
     {
         lock (_stateLock)
         {
             _activeUntil = duration is { } d ? DateTime.UtcNow + d : DateTime.MaxValue;
-            _autoActive = false; // 手動操作
+            _autoActive = false; // manual action
         }
         Logger.Line(duration is { } dd
-            ? $"guard: 抑止を開始（{dd.TotalMinutes:0} 分）"
-            : "guard: 抑止を開始（無制限）");
+            ? $"guard: suppression started ({dd.TotalMinutes:0} min)"
+            : "guard: suppression started (unlimited)");
     }
 
-    /// <summary>抑止を止め、裏へ送ったウィンドウを元に戻す。</summary>
+    /// <summary>Stop suppression and restore the windows that were pushed back.</summary>
     public void Deactivate(string reason)
     {
         bool wasActive;
@@ -108,13 +108,13 @@ internal sealed class WindowFilter
         if (wasActive)
         {
             RestoreAll();
-            Logger.Line($"guard: 抑止を終了（{reason}）");
+            Logger.Line($"guard: suppression ended ({reason})");
         }
     }
 
     /// <summary>
-    /// フォーカス（フォーカス セッション）の状態変化を受けて自動抑止を切り替える。
-    /// 自動で始めた抑止だけ自動で解除し、手動の抑止は尊重する。
+    /// React to focus (focus session) state changes to toggle auto-suppression.
+    /// Only auto-started suppression is auto-released; manual suppression is respected.
     /// </summary>
     public void OnFocusChanged(bool focusActive)
     {
@@ -124,7 +124,7 @@ internal sealed class WindowFilter
         {
             if (focusActive)
             {
-                // 抑止していなければ、フォーカス終了まで自動で抑止する。
+                // If not already suppressing, auto-suppress until focus ends.
                 if (_activeUntil is null)
                 {
                     _activeUntil = DateTime.MaxValue;
@@ -134,7 +134,7 @@ internal sealed class WindowFilter
             }
             else if (_autoActive)
             {
-                // 自動で始めたものだけ解除（手動はそのまま）。
+                // Release only what we auto-started (leave manual suppression as is).
                 _activeUntil = null;
                 _autoActive = false;
                 ended = true;
@@ -143,16 +143,16 @@ internal sealed class WindowFilter
 
         if (started)
         {
-            Logger.Line("guard: 抑止を開始（フォーカス中）");
+            Logger.Line("guard: suppression started (focus active)");
         }
         if (ended)
         {
             RestoreAll();
-            Logger.Line("guard: 抑止を終了（フォーカス終了）");
+            Logger.Line("guard: suppression ended (focus ended)");
         }
     }
 
-    /// <summary>有効期限が切れていれば抑止を解除する。ポーリングから毎回呼ぶ。</summary>
+    /// <summary>Release suppression if the expiry has passed. Called from the poller every tick.</summary>
     public void CheckExpiry()
     {
         bool expired;
@@ -168,17 +168,17 @@ internal sealed class WindowFilter
         if (expired)
         {
             RestoreAll();
-            Logger.Line("guard: 抑止を終了（時間満了）");
+            Logger.Line("guard: suppression ended (time expired)");
         }
     }
 
     /// <summary>
-    /// 1 つのウィンドウを評価し、一致するルールがあれば裏へ送る。
-    /// 既に処理済みの相手が最前面を立て直していたら、もう一度裏へ送る（再アサート対策）。
+    /// Evaluate a single window and, if a rule matches, push it to the back.
+    /// If an already-handled window re-asserted topmost, push it back again (re-assert handling).
     /// </summary>
     public void Consider(IntPtr hwnd)
     {
-        // 抑止が有効なときだけ動く（トレイから期限付きで有効化される）。
+        // Only act while suppression is active (enabled for a limited time from the tray).
         if (!IsActive)
         {
             return;
@@ -192,8 +192,8 @@ internal sealed class WindowFilter
             return;
         }
 
-        // 現状は TOPMOST のウィンドウのみを対象にする。
-        // ルールの topMostOnly は設定として残しているが未実装（常に TOPMOST 扱い）。
+        // Currently only TOPMOST windows are targeted.
+        // The rule's topMostOnly is kept as config but not implemented (always treated as TOPMOST-only).
         if (!IsTopMost(hwnd))
         {
             return;
@@ -205,7 +205,7 @@ internal sealed class WindowFilter
             return;
         }
 
-        // まず安いプロセス名で候補を絞る（タイトル取得は高コストなので後回し）。
+        // First narrow candidates by the cheap process name (title lookup is costly, so defer it).
         string process = ProcessName((int)pid);
         if (!AnyRuleMatchesProcess(process))
         {
@@ -221,8 +221,8 @@ internal sealed class WindowFilter
             return;
         }
 
-        // モーダル／ダイアログ回避：裏へ送るとアプリが進めなくなる（固まって見える）ため触らない。
-        // 企業向けに安全側へ倒し、挙動（オーナー無効）だけでなくスタイル・クラスでも識別する。
+        // Modal/dialog avoidance: pushing a modal dialog back can make the app look stuck, so skip it.
+        // Err on the safe side for enterprise use: detect by behavior (owner disabled), style, and class.
         if (IsLikelyModal(hwnd, out string modalReason))
         {
             bool firstTime;
@@ -236,7 +236,7 @@ internal sealed class WindowFilter
             }
             if (firstTime)
             {
-                Logger.Line($"guard skip: process={process} title={title} (ダイアログの可能性: {modalReason})");
+                Logger.Line($"guard skip: process={process} title={title} (likely dialog: {modalReason})");
             }
             return;
         }
@@ -245,7 +245,7 @@ internal sealed class WindowFilter
         {
             if (_tracked.TryGetValue(hwnd, out Tracked? known))
             {
-                // 追跡済み。相手が最前面を立て直したので、ログを増やさず再度裏へ送る。
+                // Already tracked. It re-asserted topmost, so push it back again without extra logging.
                 SendBack(hwnd, known.Applied);
                 return;
             }
@@ -253,7 +253,7 @@ internal sealed class WindowFilter
             var t = new Tracked
             {
                 Hwnd = hwnd,
-                WasTopMost = true, // TOPMOST のみ対象なので必ず true。復元時に TOPMOST へ戻す。
+                WasTopMost = true, // TOPMOST-only target, so always true; restored to TOPMOST later.
                 Applied = rule.Hide,
                 Process = process,
                 Title = title,
@@ -290,7 +290,7 @@ internal sealed class WindowFilter
         return null;
     }
 
-    /// <summary>追跡中のウィンドウを、隠し方を逆転してから（元が TOPMOST なら）TOPMOST に戻す。終了・異常時に必ず通る。</summary>
+    /// <summary>Reverse the hide method, then (if it was TOPMOST) restore TOPMOST. Always runs on exit/failure.</summary>
     public void RestoreAll()
     {
         lock (_lock)
@@ -330,32 +330,32 @@ internal sealed class WindowFilter
         => (GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
 
     /// <summary>
-    /// モーダル／ダイアログの可能性が高いかを、挙動・スタイル・クラスの複数シグナルで判定する。
-    /// 企業向けに「本物のダイアログは絶対に裏送りしない」安全側へ倒すため、いずれか 1 つでも
-    /// 該当すれば対象外とする。<paramref name="reason"/> に該当理由を返す（診断用）。
+    /// Decide whether a window is likely a modal/dialog, using several signals (behavior, style, class).
+    /// For enterprise safety ("never push a real dialog back"), any single match marks it as excluded.
+    /// <paramref name="reason"/> returns the matched signal (for diagnostics).
     ///
-    /// - オーナー無効：モーダル中はオーナーの他ウィンドウが無効化される（挙動としての最強シグナル）
-    /// - WS_EX_DLGMODALFRAME：モーダルフレームを持つダイアログ
-    /// - クラス "#32770"：標準の Win32 ダイアログボックス（MessageBox / DialogBox 由来）
+    /// - Owner disabled: during modality the owner's other windows are disabled (strongest behavioral signal)
+    /// - WS_EX_DLGMODALFRAME: a dialog with a modal frame
+    /// - Class "#32770": the standard Win32 dialog box (from MessageBox / DialogBox)
     /// </summary>
     private static bool IsLikelyModal(IntPtr hwnd, out string reason)
     {
         IntPtr owner = GetWindow(hwnd, GW_OWNER);
         if (owner != IntPtr.Zero && !IsWindowEnabled(owner))
         {
-            reason = "オーナー無効";
+            reason = "owner disabled";
             return true;
         }
 
         if ((GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_DLGMODALFRAME) != 0)
         {
-            reason = "モーダルフレーム(WS_EX_DLGMODALFRAME)";
+            reason = "modal frame (WS_EX_DLGMODALFRAME)";
             return true;
         }
 
         if (ClassName(hwnd) == "#32770")
         {
-            reason = "標準ダイアログクラス(#32770)";
+            reason = "standard dialog class (#32770)";
             return true;
         }
 
@@ -363,14 +363,14 @@ internal sealed class WindowFilter
         return false;
     }
 
-    /// <summary>最前面属性だけを外す。</summary>
+    /// <summary>Clear only the topmost attribute.</summary>
     private static bool Demote(IntPtr hwnd)
         => SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
 
     /// <summary>
-    /// 明示的に裏へ送る。HWND_NOTOPMOST は「非最前面グループの先頭」に置くだけなので、
-    /// これを行わないと見た目が変わらない。
+    /// Explicitly push the window to the back. HWND_NOTOPMOST only moves it to the top of the
+    /// non-topmost group, so without this the appearance would not change.
     /// </summary>
     private static bool SendBack(IntPtr hwnd, HideMethod method) => method switch
     {

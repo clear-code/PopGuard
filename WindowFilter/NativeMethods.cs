@@ -4,28 +4,28 @@ using System.Text;
 namespace WindowFilter;
 
 /// <summary>
-/// ウィンドウの列挙・情報取得・Z オーダー／表示状態の操作のための P/Invoke 定義。
-/// トップレベル検知（EnumWindows）と、TOPMOST 解除・裏送り（SetWindowPos 等）に使う。
+/// P/Invoke definitions for enumerating windows, getting their info, and changing Z order/visibility.
+/// Used for top-level detection (EnumWindows) and for clearing TOPMOST / pushing back (SetWindowPos etc.).
 /// </summary>
 internal static class NativeMethods
 {
-    // 拡張スタイル取得
+    // Extended style access
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TOPMOST = 0x00000008;
-    public const int WS_EX_DLGMODALFRAME = 0x00000001; // モーダルフレーム（ダイアログ）
+    public const int WS_EX_DLGMODALFRAME = 0x00000001; // modal frame (dialog)
 
-    // SetWindowPos の挿入位置
+    // SetWindowPos insert-after positions
     public static readonly IntPtr HWND_TOPMOST = new(-1);
     public static readonly IntPtr HWND_NOTOPMOST = new(-2);
     public static readonly IntPtr HWND_BOTTOM = new(1);
 
-    // SetWindowPos のフラグ
+    // SetWindowPos flags
     public const uint SWP_NOSIZE = 0x0001;
     public const uint SWP_NOMOVE = 0x0002;
     public const uint SWP_NOACTIVATE = 0x0010;
     public const uint SWP_ASYNCWINDOWPOS = 0x4000;
 
-    // ShowWindowAsync の表示コマンド
+    // ShowWindowAsync show commands
     public const int SW_HIDE = 0;
     public const int SW_MINIMIZE = 6;
     public const int SW_SHOWNA = 8;
@@ -40,7 +40,7 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
 
-    // 拡張スタイル取得。TOPMOST は 32bit スタイルビットなので GetWindowLongW で十分。
+    // Extended-style access. TOPMOST is a 32-bit style bit, so GetWindowLongW is sufficient.
     [DllImport("user32.dll", SetLastError = true, EntryPoint = "GetWindowLongW")]
     public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
@@ -64,7 +64,7 @@ internal static class NativeMethods
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
-    // トップレベルウィンドウの列挙（UIA が見せないポップアップも拾うため）
+    // Enumerate top-level windows (to catch popups that UIA does not expose)
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
     [DllImport("user32.dll")]
@@ -84,7 +84,7 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
-    // モーダル判定（オーナーが無効化されているか）に使う
+    // Used for modal detection (whether the owner is disabled)
     public const uint GW_OWNER = 4;
 
     [DllImport("user32.dll", SetLastError = true)]

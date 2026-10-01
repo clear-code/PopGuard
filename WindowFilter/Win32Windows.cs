@@ -4,17 +4,17 @@ using System.Text;
 namespace WindowFilter;
 
 /// <summary>
-/// Win32 でトップレベルウィンドウを列挙・情報取得するヘルパー。
-/// EnumWindows は OS の全トップレベルウィンドウを返すため、非アクティブ化ポップアップも取得する。
+/// Win32 helper for enumerating top-level windows and getting their info.
+/// EnumWindows returns all top-level windows the OS knows about, so it also catches no-activate popups.
 /// </summary>
 internal static class Win32Windows
 {
-    /// <summary>可視のトップレベルウィンドウのハンドルを列挙する。</summary>
+    /// <summary>Enumerate the handles of visible top-level windows.</summary>
     public static List<IntPtr> EnumerateVisibleTopLevel()
     {
         var list = new List<IntPtr>();
 
-        // EnumWindows は同期呼び出しなので、コールバックはローカルで保持すれば十分。
+        // EnumWindows is synchronous, so keeping the callback in a local is sufficient.
         NativeMethods.EnumWindows((hwnd, _) =>
         {
             if (NativeMethods.IsWindowVisible(hwnd))
@@ -27,7 +27,7 @@ internal static class Win32Windows
         return list;
     }
 
-    /// <summary>ごく小さい／サイズの取れないウィンドウ（補助的な隠れ窓など）を除くための判定。</summary>
+    /// <summary>Filter out very small / unsized windows (e.g. auxiliary hidden helper windows).</summary>
     public static bool IsReasonableSize(IntPtr hwnd)
     {
         if (!NativeMethods.GetWindowRect(hwnd, out NativeMethods.RECT r))

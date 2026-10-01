@@ -1,18 +1,18 @@
 namespace WindowFilter;
 
 /// <summary>
-/// 検知したウィンドウを 1 行で報告する。ポーリングは別スレッド（Timer）で動くため、
-/// 重複抑制の状態はロックで保護する。
+/// Reports a detected window as a single log line. Polling runs on a separate (timer) thread,
+/// so the dedup state is guarded by a lock.
 /// </summary>
 internal sealed class WindowReporter
 {
-    // 同一ウィンドウが短時間に連続検知された場合の抑制時間。
+    // Dedup window: suppress repeated detections of the same window within this interval.
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMilliseconds(1500);
 
     private readonly object _lock = new();
     private readonly Dictionary<string, DateTime> _recent = new();
 
-    /// <summary>Win32（EnumWindows 経路）で拾ったウィンドウを報告する。キーは HWND。</summary>
+    /// <summary>Report a window picked up via Win32 (EnumWindows). The key is the HWND.</summary>
     public void Report(string kind, IntPtr hwnd, string process, string title)
     {
         string key = "h" + hwnd.ToInt64();

@@ -6,16 +6,16 @@ using System.Windows.Forms;
 namespace WindowFilter;
 
 /// <summary>
-/// タスクトレイに常駐し、メニューからウィンドウ抑止を期限付きで有効化する。
-/// 抑止時間の候補は設定ファイル（durations）から渡される。
+/// Resides in the system tray and enables window suppression for a limited time from the menu.
+/// The suppression-duration options are passed in from the config file (durations).
 /// </summary>
 internal sealed class TrayContext : ApplicationContext
 {
-    // メニューの「状態:」テキスト色
-    private static readonly Color ActiveTextColor = Color.FromArgb(0, 128, 0);     // 緑
-    private static readonly Color InactiveTextColor = Color.FromArgb(105, 105, 105); // 灰
+    // Text color of the menu status item
+    private static readonly Color ActiveTextColor = Color.FromArgb(0, 128, 0);     // green
+    private static readonly Color InactiveTextColor = Color.FromArgb(105, 105, 105); // gray
 
-    // 「状態:」の横に出す丸の色（抑止中=緑 / 非抑止=灰）
+    // Color of the dot next to the status label (active = green / inactive = gray)
     private static readonly Color ActiveDotColor = Color.FromArgb(46, 204, 113);
     private static readonly Color InactiveDotColor = Color.FromArgb(150, 150, 150);
 
@@ -25,15 +25,15 @@ internal sealed class TrayContext : ApplicationContext
     private readonly ToolStripMenuItem _stopItem;
     private readonly System.Windows.Forms.Timer _uiTimer;
 
-    // 事前に用意して exe に埋め込んだアイコン（抑止中=緑 / 非抑止=灰）を読み込む
+    // Load the pre-made icons embedded in the exe (active = green / inactive = gray)
     private readonly Icon _activeIcon;
     private readonly Icon _inactiveIcon;
 
-    // メニュー「状態:」項目に付ける 16px アイコン（埋め込みアイコンから抽出）
+    // 16px colored dots shown on the menu status item
     private readonly Bitmap _activeDot;
     private readonly Bitmap _inactiveDot;
 
-    private bool? _lastActive; // 初回は必ず反映させるため null 始まり
+    private bool? _lastActive; // starts null so the first update is always applied
 
     public TrayContext(WindowFilter guard, IReadOnlyList<DurationOption> durations)
     {
@@ -44,11 +44,11 @@ internal sealed class TrayContext : ApplicationContext
         _activeDot = MakeDotBitmap(ActiveDotColor, 16);
         _inactiveDot = MakeDotBitmap(InactiveDotColor, 16);
 
-        // 無効（Enabled=false）だとテキスト色が効かないため、有効のままにしてクリックは無処理。
+        // A disabled (Enabled=false) item ignores ForeColor, so keep it enabled with a no-op click.
         _statusItem = new ToolStripMenuItem("状態: 抑止していません");
         _stopItem = new ToolStripMenuItem("抑止を停止", null, (_, _) => Stop()) { Enabled = false };
 
-        // 「ウィンドウを抑止する」→ 候補（30分 / 1時間 / … / 無制限）のサブメニュー
+        // "Suppress windows" -> submenu of options (30 min / 1 hour / ... / unlimited)
         var suppress = new ToolStripMenuItem("ウィンドウを抑止する");
         foreach (DurationOption opt in durations)
         {
@@ -72,7 +72,7 @@ internal sealed class TrayContext : ApplicationContext
             ContextMenuStrip = menu,
         };
 
-        // 残り時間表示と、満了時のメニュー状態を追従させるための更新用タイマー。
+        // Update timer to refresh the remaining-time display and track menu state on expiry.
         _uiTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         _uiTimer.Tick += (_, _) => UpdateStatus();
         _uiTimer.Start();
@@ -90,7 +90,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private void Stop()
     {
-        _guard.Deactivate("手動停止");
+        _guard.Deactivate("manual stop");
         UpdateStatus();
     }
 
@@ -99,7 +99,7 @@ internal sealed class TrayContext : ApplicationContext
         DateTime? until = _guard.ActiveUntilUtc;
         bool active = until.HasValue;
 
-        // 色・画像・アイコン・停止ボタンは「状態が変わったとき」だけ更新する（毎秒の代入を避ける）。
+        // Update color/image/icon/stop-button only when the state changes (avoid per-second assignment).
         if (_lastActive != active)
         {
             _notifyIcon.Icon = active ? _activeIcon : _inactiveIcon;
@@ -109,7 +109,7 @@ internal sealed class TrayContext : ApplicationContext
             _lastActive = active;
         }
 
-        // テキストは有限の抑止中のみ毎秒変わる。固定文言の再代入は setter 側で無視される。
+        // Text changes per second only during finite suppression. Re-assigning the same string is ignored by the setter.
         string text = until switch
         {
             { } when _guard.IsAutoActive => "抑止中（フォーカス中）",
@@ -121,7 +121,7 @@ internal sealed class TrayContext : ApplicationContext
         _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
     }
 
-    /// <summary>「状態:」の横に付ける色付きの ●（メニュー項目の画像用）。</summary>
+    /// <summary>A colored dot shown next to the status label (for the menu item image).</summary>
     private static Bitmap MakeDotBitmap(Color color, int size)
     {
         var bmp = new Bitmap(size, size);
@@ -135,7 +135,7 @@ internal sealed class TrayContext : ApplicationContext
         return bmp;
     }
 
-    /// <summary>exe に埋め込んだアイコン（Assets\*.ico）を名前で読み込む。</summary>
+    /// <summary>Load an icon embedded in the exe (Assets\*.ico) by file name.</summary>
     private static Icon LoadIcon(string fileName)
     {
         Assembly asm = Assembly.GetExecutingAssembly();
@@ -145,7 +145,7 @@ internal sealed class TrayContext : ApplicationContext
 
         if (name is null)
         {
-            Logger.Line("tray: アイコンリソースが見つかりません: " + fileName);
+            Logger.Line("tray: icon resource not found: " + fileName);
             return SystemIcons.Application;
         }
 
@@ -160,7 +160,7 @@ internal sealed class TrayContext : ApplicationContext
         {
             remain = TimeSpan.Zero;
         }
-        // 1 時間以上は h:mm:ss、未満は m:ss で表示。
+        // Show h:mm:ss for an hour or more, m:ss otherwise.
         return remain.TotalHours >= 1
             ? $"{(int)remain.TotalHours}:{remain.Minutes:00}:{remain.Seconds:00}"
             : $"{remain.Minutes}:{remain.Seconds:00}";
@@ -168,7 +168,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private void ExitApp()
     {
-        _guard.Deactivate("終了");
+        _guard.Deactivate("exit");
         ExitThread();
     }
 

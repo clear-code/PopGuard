@@ -1,10 +1,10 @@
 namespace WindowFilter;
 
 /// <summary>
-/// トップレベルウィンドウ（Win32 の EnumWindows で列挙）を定期的に走査し、
-/// 新しく現れたものを報告する。WindowOpenedEvent を上げず、UIA のルート直下にも
-/// 現れないポップアップ（Thunderbird の通知など）を、イベントに頼らず検出する。
-/// あわせて各ウィンドウを WindowFilter で評価し、ルール一致のものは裏へ送る。
+/// Periodically scans top-level windows (enumerated via Win32 EnumWindows) and reports newly
+/// appeared ones. It detects, without relying on events, popups that do not raise WindowOpenedEvent
+/// and do not appear directly under the UIA root (e.g. Thunderbird's notifications).
+/// It also evaluates each window with WindowFilter and pushes rule-matched ones to the back.
 /// </summary>
 internal sealed class TopLevelPoller
 {
@@ -12,8 +12,8 @@ internal sealed class TopLevelPoller
 
     private readonly WindowReporter _reporter;
     private readonly WindowFilter _guard;
-    private readonly HashSet<long> _known = new(); // タイマーコールバック単一なので排他不要
-    // WinForms を参照しているため Timer 名が衝突する。スレッドプールの Timer を明示する。
+    private readonly HashSet<long> _known = new(); // single timer callback, so no locking needed
+    // Referencing WinForms makes the name Timer ambiguous; be explicit about the thread-pool Timer.
     private System.Threading.Timer? _timer;
 
     public TopLevelPoller(WindowReporter reporter, WindowFilter guard)
@@ -24,7 +24,7 @@ internal sealed class TopLevelPoller
 
     public void Start()
     {
-        // 起動時点で既に開いているウィンドウは「既知」として記録し、報告はしない。
+        // Record windows already open at startup as "known" and do not report them.
         foreach (IntPtr h in Win32Windows.EnumerateVisibleTopLevel())
         {
             _known.Add(h.ToInt64());
@@ -43,7 +43,7 @@ internal sealed class TopLevelPoller
     {
         try
         {
-            // 抑止の有効期限が切れていれば解除・復元する。
+            // Release/restore if the suppression expiry has passed.
             _guard.CheckExpiry();
 
             List<IntPtr> current = Win32Windows.EnumerateVisibleTopLevel();
@@ -53,23 +53,23 @@ internal sealed class TopLevelPoller
             {
                 present.Add(h.ToInt64());
 
-                // 毎回すべてのトップレベルを評価し、ルール一致の窓は裏へ送り続ける
-                // （相手が最前面を立て直しても押さえ込む）
+                // Evaluate every top-level window each tick and keep pushing rule-matched ones back
+                // (so they stay down even if they re-assert topmost).
                 _guard.Consider(h);
 
-                // 新規に出現したもののうち、意味のある大きさのものだけ報告する。
+                // Report only newly appeared windows that are a meaningful size.
                 if (_known.Add(h.ToInt64()) && Win32Windows.IsReasonableSize(h))
                 {
                     _reporter.Report("toplevel", h, Win32Windows.ProcessName(h), Win32Windows.Title(h));
                 }
             }
 
-            // 閉じたウィンドウは既知集合から外す（再度開いたら改めて報告するため）。
+            // Drop closed windows from the known set (so a reopen is reported again).
             _known.IntersectWith(present);
         }
         catch
         {
-            // 列挙失敗時はこの回をスキップ。
+            // Skip this round on enumeration failure.
         }
     }
 }

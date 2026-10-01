@@ -2,20 +2,20 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- FocusSessionManager（Windows.UI.Shell, Win11 22H2/22621+）の WinRT 射影を使うため Win11 SDK 系でビルド -->
+    <!-- Build against the Win11 SDK to use the WinRT projection of FocusSessionManager (Windows.UI.Shell, Win11 22H2/22621+) -->
     <TargetFramework>net9.0-windows10.0.22621.0</TargetFramework>
-    <!-- 実際に対応する最小 OS は Windows 10（フォーカス連動のみ 22621+ で、実行時にバージョンガード） -->
+    <!-- Minimum supported OS is Windows 10 (focus sync only on 22621+, guarded at runtime by version) -->
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>WindowFilter</AssemblyName>
-    <!-- タスクトレイ常駐（NotifyIcon）のために WinForms を使う -->
+    <!-- Use WinForms for the system-tray residence (NotifyIcon) -->
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- exe 本体のアイコン（エクスプローラー／タスクバー表示用） -->
+    <!-- The exe's own icon (shown in Explorer / taskbar) -->
     <ApplicationIcon>WindowFilter.ico</ApplicationIcon>
   </PropertyGroup>
 
-  <!-- トレイ用アイコン（抑止中=緑 / 非抑止=灰）を exe に埋め込む -->
+  <!-- Embed the tray icons (active = green / inactive = gray) into the exe -->
   <ItemGroup>
     <EmbeddedResource Include="Assets\tray_active.ico" />
     <EmbeddedResource Include="Assets\tray_inactive.ico" />

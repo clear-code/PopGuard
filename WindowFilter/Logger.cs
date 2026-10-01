@@ -3,10 +3,10 @@ using System.Diagnostics;
 namespace WindowFilter;
 
 /// <summary>
-/// ファイルへログを書き出すロガー。書き込みのたびにファイルを開閉し、
-/// サイズ上限を超えたら世代ローテーションする。複数プロセス／スレッドからの
-/// 同時書き込みに備えて名前付き Mutex で直列化する。
-/// （BrowserGuard の Logger.cs を参考に作成）
+/// Writes log lines to a file. Opens and closes the file for each write, and rotates by
+/// generations once it exceeds the size limit. Serializes concurrent writes from multiple
+/// processes/threads with a named mutex.
+/// (Modeled on BrowserGuard's Logger.cs.)
 /// </summary>
 internal sealed class Logger
 {
@@ -16,8 +16,8 @@ internal sealed class Logger
 
     private const string LogFileNameBase = "WindowFilter";
 
-    // 書き込みの瞬間だけファイルを開くため、ローテーションが他の書き手の
-    // 途中で起きないよう Mutex で守る（同一マシンの複数インスタンス対策）。
+    // The file is only open during a write, so guard rotation with a mutex so it does not happen
+    // in the middle of another writer (handles multiple instances on the same machine).
     private static readonly Mutex FileMutex = new(false, @"Local\WindowFilter.Logger");
 
     private static readonly TimeSpan MutexTimeout = TimeSpan.FromSeconds(5);
@@ -30,7 +30,7 @@ internal sealed class Logger
 
     private bool EnableLogging { get; }
 
-    // アプリ全体で共有する既定のロガー。静的に呼び出せる入口。
+    // The default logger shared across the app. A static entry point.
     private static readonly Logger Shared = new();
 
     public static void Line(string message) => Shared.Log(message);
@@ -43,7 +43,7 @@ internal sealed class Logger
 
     public Logger() : this(DefaultDirectory()) { }
 
-    // ディレクトリとサイズを引数にできるのは、実ログに書かずにローテーションを試すため。
+    // Directory and size are arguments so rotation can be exercised without writing to the real log.
     public Logger(string directory, long maxLogSize = DefaultMaxLogSize)
     {
         _maxLogSize = maxLogSize;
@@ -57,7 +57,7 @@ internal sealed class Logger
         }
         catch
         {
-            // ログ出力できないが、全体の処理は続行する。
+            // Cannot write logs, but keep the app running.
         }
     }
 
@@ -103,12 +103,12 @@ internal sealed class Logger
             }
             catch (AbandonedMutexException)
             {
-                // 保持していたプロセスが落ちた場合。ファイル自体は無事。
+                // A process that held it died. The file itself is fine.
                 held = true;
             }
 
             RotateIfNeeded();
-            // ファイルを共有で開くことで、他インスタンスも書き続けられる。
+            // Opening the file shared lets other instances keep writing too.
             using var stream = new FileStream(
                 FilePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
             using var writer = new StreamWriter(stream);
@@ -137,8 +137,8 @@ internal sealed class Logger
         }
     }
 
-    // 世代ファイルはログと同じ場所に置く。別の場所から見ると移動対象が無く、
-    // ログを切り詰めるだけになってしまう。
+    // Generation files live next to the log. Looking elsewhere would find nothing to move
+    // and would end up just truncating the log.
     private void Rotate()
     {
         var oldest = GenerationPath(MaxGeneration);
