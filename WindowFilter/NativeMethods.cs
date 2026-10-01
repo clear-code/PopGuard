@@ -93,4 +93,9 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool IsWindowEnabled(IntPtr hWnd);
+
+    // 実行時に描画したアイコンのハンドルを解放する（GetHicon の後始末）。
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DestroyIcon(IntPtr hIcon);
 }
