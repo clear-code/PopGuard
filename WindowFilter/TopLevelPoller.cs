@@ -13,7 +13,8 @@ internal sealed class TopLevelPoller
     private readonly WindowReporter _reporter;
     private readonly WindowFilter _guard;
     private readonly HashSet<long> _known = new(); // タイマーコールバック単一なので排他不要
-    private Timer? _timer;
+    // WinForms を参照しているため Timer 名が衝突する。スレッドプールの Timer を明示する。
+    private System.Threading.Timer? _timer;
 
     public TopLevelPoller(WindowReporter reporter, WindowFilter guard)
     {
@@ -29,7 +30,7 @@ internal sealed class TopLevelPoller
             _known.Add(h.ToInt64());
         }
 
-        _timer = new Timer(_ => Tick(), null, Interval, Interval);
+        _timer = new System.Threading.Timer(_ => Tick(), null, Interval, Interval);
     }
 
     public void Stop()
@@ -42,6 +43,9 @@ internal sealed class TopLevelPoller
     {
         try
         {
+            // 抑止の有効期限が切れていれば解除・復元する。
+            _guard.CheckExpiry();
+
             List<IntPtr> current = Win32Windows.EnumerateVisibleTopLevel();
 
             var present = new HashSet<long>();

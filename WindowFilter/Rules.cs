@@ -9,6 +9,42 @@ namespace WindowFilter;
 internal sealed class RuleFile
 {
     public List<RuleEntry>? Rules { get; set; }
+
+    // トレイメニューに出す「抑止時間」の候補。省略時は既定の候補を使う。
+    public List<DurationEntry>? Durations { get; set; }
+}
+
+/// <summary>抑止時間の候補 1 件分（JSON）。minutes が 0 以下なら「無制限」。</summary>
+internal sealed class DurationEntry
+{
+    public string? Label { get; set; }
+    public int Minutes { get; set; }
+}
+
+/// <summary>抑止時間の候補（コンパイル済み）。<see cref="Duration"/> が null なら無制限。</summary>
+internal sealed class DurationOption
+{
+    public string Label { get; }
+    public TimeSpan? Duration { get; }
+
+    public DurationOption(string label, TimeSpan? duration)
+    {
+        Label = label;
+        Duration = duration;
+    }
+}
+
+/// <summary>設定ファイル全体（ルール＋抑止時間の候補）。</summary>
+internal sealed class AppConfig
+{
+    public IReadOnlyList<TargetRule> Rules { get; }
+    public IReadOnlyList<DurationOption> Durations { get; }
+
+    public AppConfig(IReadOnlyList<TargetRule> rules, IReadOnlyList<DurationOption> durations)
+    {
+        Rules = rules;
+        Durations = durations;
+    }
 }
 
 /// <summary>JSON のルール 1 件分の形（生の文字列）。</summary>
@@ -159,13 +195,13 @@ internal static class RulesStore
         AllowTrailingCommas = true,
     };
 
-    public static List<TargetRule> Load()
+    public static AppConfig Load()
     {
         if (!File.Exists(FilePath))
         {
             TryWriteSample();
             Logger.Line("rules: ファイルが無いためサンプルを生成しました。何も抑止しません。 path=" + FilePath);
-            return new List<TargetRule>();
+            return new AppConfig(new List<TargetRule>(), DefaultDurations());
         }
 
         RuleFile? file;
@@ -176,7 +212,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: JSON の読み込みに失敗しました（何も抑止しません）: " + ex.Message);
-            return new List<TargetRule>();
+            return new AppConfig(new List<TargetRule>(), DefaultDurations());
         }
 
         var rules = new List<TargetRule>();
@@ -202,8 +238,55 @@ internal static class RulesStore
             rules.Add(rule);
         }
 
-        Logger.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} path={FilePath}");
-        return rules;
+        IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
+
+        Logger.Line($"rules: 有効={rules.Count} 無効={invalid} 無効化={disabled} 時間候補={durations.Count} path={FilePath}");
+        return new AppConfig(rules, durations);
+    }
+
+    /// <summary>設定の候補をコンパイルする。空／未指定なら既定の候補を使う。</summary>
+    private static IReadOnlyList<DurationOption> BuildDurations(List<DurationEntry>? entries)
+    {
+        if (entries is null || entries.Count == 0)
+        {
+            return DefaultDurations();
+        }
+
+        var list = new List<DurationOption>();
+        foreach (DurationEntry e in entries)
+        {
+            TimeSpan? duration = e.Minutes > 0 ? TimeSpan.FromMinutes(e.Minutes) : null; // 0 以下 = 無制限
+            string label = string.IsNullOrWhiteSpace(e.Label) ? AutoLabel(e.Minutes) : e.Label.Trim();
+            list.Add(new DurationOption(label, duration));
+        }
+        return list;
+    }
+
+    /// <summary>既定の候補：30分 / 1時間 / 2時間 / 一日 / 無制限。</summary>
+    private static IReadOnlyList<DurationOption> DefaultDurations() => new List<DurationOption>
+    {
+        new("30分", TimeSpan.FromMinutes(30)),
+        new("1時間", TimeSpan.FromHours(1)),
+        new("2時間", TimeSpan.FromHours(2)),
+        new("一日", TimeSpan.FromDays(1)),
+        new("無制限", null),
+    };
+
+    private static string AutoLabel(int minutes)
+    {
+        if (minutes <= 0)
+        {
+            return "無制限";
+        }
+        if (minutes % 1440 == 0)
+        {
+            return $"{minutes / 1440}日";
+        }
+        if (minutes % 60 == 0)
+        {
+            return $"{minutes / 60}時間";
+        }
+        return $"{minutes}分";
     }
 
     private static void TryWriteSample()
@@ -223,6 +306,16 @@ internal static class RulesStore
                         Hide = "Bottom",
                         TopMostOnly = true,
                     },
+                },
+                // トレイメニューに出す抑止時間の候補（minutes が 0 以下なら無制限）。
+                // この durations 自体を省略すると、同じ既定候補が使われる。
+                Durations = new List<DurationEntry>
+                {
+                    new() { Label = "30分", Minutes = 30 },
+                    new() { Label = "1時間", Minutes = 60 },
+                    new() { Label = "2時間", Minutes = 120 },
+                    new() { Label = "一日", Minutes = 1440 },
+                    new() { Label = "無制限", Minutes = 0 },
                 },
             };
 

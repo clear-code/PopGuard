@@ -1,10 +1,14 @@
+using System.Windows.Forms;
+
 namespace WindowFilter;
 
 internal static class Program
 {
+    [STAThread]
     private static void Main()
     {
-        var guard = new WindowFilter(RulesStore.Load());
+        AppConfig config = RulesStore.Load();
+        var guard = new WindowFilter(config.Rules);
 
         // 裏へ送ったウィンドウを取り残さないよう、異常時・終了時に必ず復元する。
         AppDomain.CurrentDomain.UnhandledException += (_, _) =>
@@ -25,8 +29,12 @@ internal static class Program
             poller.Start();
             Logger.Line("WindowFilter: started");
 
-            // トップレベル列挙は別スレッド（Timer）で動く。メインスレッドは常駐のため待機し続ける。
-            new ManualResetEvent(false).WaitOne();
+            // タスクトレイに常駐。抑止は既定オフで、メニューから期限付きに有効化する。
+            ApplicationConfiguration.Initialize();
+            Application.Run(new TrayContext(guard, config.Durations));
+
+            poller.Stop();
+            guard.RestoreAll();
         }
         catch (Exception ex)
         {

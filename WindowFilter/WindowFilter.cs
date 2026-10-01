@@ -35,7 +35,86 @@ internal sealed class WindowFilter
     private readonly object _lock = new();
     private readonly Dictionary<IntPtr, Tracked> _tracked = new();
 
+    // モーダルとみなして対象外にした HWND（同じものを毎回ログしないための記録）。_lock で保護する。
+    private readonly HashSet<IntPtr> _skippedModal = new();
+
+    // 抑止の有効期限（UTC）。null なら抑止していない。トレイ操作（UI スレッド）と
+    // ポーリング（Timer スレッド）の両方から触るため _stateLock で保護する。
+    private readonly object _stateLock = new();
+    private DateTime? _activeUntil;
+
     public WindowFilter(IReadOnlyList<TargetRule> rules) => _rules = rules;
+
+    /// <summary>抑止が現在有効か。</summary>
+    public bool IsActive
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _activeUntil is { } until && DateTime.UtcNow < until;
+            }
+        }
+    }
+
+    /// <summary>抑止の有効期限（UTC）。無効なら null。表示用。</summary>
+    public DateTime? ActiveUntilUtc
+    {
+        get
+        {
+            lock (_stateLock)
+            {
+                return _activeUntil;
+            }
+        }
+    }
+
+    /// <summary>抑止を有効にする。<paramref name="duration"/> が null なら無制限。</summary>
+    public void Activate(TimeSpan? duration)
+    {
+        lock (_stateLock)
+        {
+            _activeUntil = duration is { } d ? DateTime.UtcNow + d : DateTime.MaxValue;
+        }
+        Logger.Line(duration is { } dd
+            ? $"guard: 抑止を開始（{dd.TotalMinutes:0} 分）"
+            : "guard: 抑止を開始（無制限）");
+    }
+
+    /// <summary>抑止を止め、裏へ送ったウィンドウを元に戻す。</summary>
+    public void Deactivate(string reason)
+    {
+        bool wasActive;
+        lock (_stateLock)
+        {
+            wasActive = _activeUntil.HasValue;
+            _activeUntil = null;
+        }
+        if (wasActive)
+        {
+            RestoreAll();
+            Logger.Line($"guard: 抑止を終了（{reason}）");
+        }
+    }
+
+    /// <summary>有効期限が切れていれば抑止を解除する。ポーリングから毎回呼ぶ。</summary>
+    public void CheckExpiry()
+    {
+        bool expired;
+        lock (_stateLock)
+        {
+            expired = _activeUntil is { } until && DateTime.UtcNow >= until;
+            if (expired)
+            {
+                _activeUntil = null;
+            }
+        }
+        if (expired)
+        {
+            RestoreAll();
+            Logger.Line("guard: 抑止を終了（時間満了）");
+        }
+    }
 
     /// <summary>
     /// 1 つのウィンドウを評価し、一致するルールがあれば裏へ送る。
@@ -43,6 +122,11 @@ internal sealed class WindowFilter
     /// </summary>
     public void Consider(IntPtr hwnd)
     {
+        // 抑止が有効なときだけ動く（トレイから期限付きで有効化される）。
+        if (!IsActive)
+        {
+            return;
+        }
         if (hwnd == IntPtr.Zero || _rules.Count == 0)
         {
             return;
@@ -78,6 +162,26 @@ internal sealed class WindowFilter
         TargetRule? rule = FindRule(process, className, title);
         if (rule is null)
         {
+            return;
+        }
+
+        // モーダル／ダイアログ回避：裏へ送るとアプリが進めなくなる（固まって見える）ため触らない。
+        // 企業向けに安全側へ倒し、挙動（オーナー無効）だけでなくスタイル・クラスでも識別する。
+        if (IsLikelyModal(hwnd, out string modalReason))
+        {
+            bool firstTime;
+            lock (_lock)
+            {
+                firstTime = _skippedModal.Add(hwnd);
+                if (_skippedModal.Count > 256)
+                {
+                    _skippedModal.Clear();
+                }
+            }
+            if (firstTime)
+            {
+                Logger.Line($"guard skip: process={process} title={title} (ダイアログの可能性: {modalReason})");
+            }
             return;
         }
 
@@ -162,11 +266,46 @@ internal sealed class WindowFilter
             }
 
             _tracked.Clear();
+            _skippedModal.Clear();
         }
     }
 
     private static bool IsTopMost(IntPtr hwnd)
         => (GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+
+    /// <summary>
+    /// モーダル／ダイアログの可能性が高いかを、挙動・スタイル・クラスの複数シグナルで判定する。
+    /// 企業向けに「本物のダイアログは絶対に裏送りしない」安全側へ倒すため、いずれか 1 つでも
+    /// 該当すれば対象外とする。<paramref name="reason"/> に該当理由を返す（診断用）。
+    ///
+    /// - オーナー無効：モーダル中はオーナーの他ウィンドウが無効化される（挙動としての最強シグナル）
+    /// - WS_EX_DLGMODALFRAME：モーダルフレームを持つダイアログ
+    /// - クラス "#32770"：標準の Win32 ダイアログボックス（MessageBox / DialogBox 由来）
+    /// </summary>
+    private static bool IsLikelyModal(IntPtr hwnd, out string reason)
+    {
+        IntPtr owner = GetWindow(hwnd, GW_OWNER);
+        if (owner != IntPtr.Zero && !IsWindowEnabled(owner))
+        {
+            reason = "オーナー無効";
+            return true;
+        }
+
+        if ((GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_DLGMODALFRAME) != 0)
+        {
+            reason = "モーダルフレーム(WS_EX_DLGMODALFRAME)";
+            return true;
+        }
+
+        if (ClassName(hwnd) == "#32770")
+        {
+            reason = "標準ダイアログクラス(#32770)";
+            return true;
+        }
+
+        reason = string.Empty;
+        return false;
+    }
 
     /// <summary>最前面属性だけを外す。</summary>
     private static bool Demote(IntPtr hwnd)

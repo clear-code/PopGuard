@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace WindowFilter;
 
 /// <summary>
@@ -71,11 +73,14 @@ internal sealed class Logger
 
     private void LogImpl(string message)
     {
+        string line = $"{GetTimestamp()} : {message}";
+        Debug.WriteLine(line);
+
         if (!EnableLogging)
         {
             return;
         }
-        Write($"{GetTimestamp()} : {message}");
+        Write(line);
     }
 
     private void LogImpl(Exception e)

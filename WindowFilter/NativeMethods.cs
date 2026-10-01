@@ -12,6 +12,7 @@ internal static class NativeMethods
     // 拡張スタイル取得
     public const int GWL_EXSTYLE = -20;
     public const int WS_EX_TOPMOST = 0x00000008;
+    public const int WS_EX_DLGMODALFRAME = 0x00000001; // モーダルフレーム（ダイアログ）
 
     // SetWindowPos の挿入位置
     public static readonly IntPtr HWND_TOPMOST = new(-1);
@@ -82,4 +83,14 @@ internal static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    // モーダル判定（オーナーが無効化されているか）に使う
+    public const uint GW_OWNER = 4;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowEnabled(IntPtr hWnd);
 }
