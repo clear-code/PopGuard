@@ -7,15 +7,15 @@ namespace WindowFilter;
 /// </summary>
 internal sealed class FocusSessionWatcher
 {
-    private readonly WindowFilter _guard;
+    private readonly WindowFilter _windowFilter;
     private readonly bool _autoSuppress;
 
     // Hold the reference so the event subscription is not collected by GC.
     private Windows.UI.Shell.FocusSessionManager? _manager;
 
-    public FocusSessionWatcher(WindowFilter guard, bool autoSuppress)
+    public FocusSessionWatcher(WindowFilter windowFilter, bool autoSuppress)
     {
-        _guard = guard;
+        _windowFilter = windowFilter;
         _autoSuppress = autoSuppress;
     }
 
@@ -47,7 +47,7 @@ internal sealed class FocusSessionWatcher
             // If focus is already active at startup, reflect it.
             if (_autoSuppress && active)
             {
-                _guard.OnFocusChanged(true);
+                _windowFilter.OnFocusChanged(true);
             }
         }
         catch (Exception ex)
@@ -63,7 +63,7 @@ internal sealed class FocusSessionWatcher
 
         if (_autoSuppress)
         {
-            _guard.OnFocusChanged(active);
+            _windowFilter.OnFocusChanged(active);
         }
     }
 }
