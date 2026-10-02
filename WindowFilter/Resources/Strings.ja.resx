@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="MenuSuppress" xml:space="preserve">
+    <value>ウィンドウを抑止する</value>
+  </data>
+  <data name="MenuStop" xml:space="preserve">
+    <value>抑止を停止</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>終了</value>
+  </data>
+
+  <data name="StatusPrefix" xml:space="preserve">
+    <value>状態: </value>
+  </data>
+  <data name="StatusNotSuppressing" xml:space="preserve">
+    <value>抑止していません</value>
+  </data>
+  <data name="StatusUnlimited" xml:space="preserve">
+    <value>抑止中（無制限）</value>
+  </data>
+  <data name="StatusFocus" xml:space="preserve">
+    <value>抑止中（フォーカス中）</value>
+  </data>
+  <data name="StatusRemaining" xml:space="preserve">
+    <value>抑止中（残り {0}）</value>
+  </data>
+
+  <data name="BalloonSuppress" xml:space="preserve">
+    <value>ウィンドウを抑止します（{0}）</value>
+  </data>
+
+  <data name="DurUnlimited" xml:space="preserve">
+    <value>無制限</value>
+  </data>
+  <data name="Dur30Min" xml:space="preserve">
+    <value>30分</value>
+  </data>
+  <data name="Dur1Hour" xml:space="preserve">
+    <value>1時間</value>
+  </data>
+  <data name="Dur2Hours" xml:space="preserve">
+    <value>2時間</value>
+  </data>
+  <data name="Dur1Day" xml:space="preserve">
+    <value>一日</value>
+  </data>
+  <data name="DurMinutesFmt" xml:space="preserve">
+    <value>{0}分</value>
+  </data>
+  <data name="DurHoursFmt" xml:space="preserve">
+    <value>{0}時間</value>
+  </data>
+  <data name="DurDaysFmt" xml:space="preserve">
+    <value>{0}日</value>
+  </data>
+</root>

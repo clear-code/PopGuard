@@ -2,6 +2,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
+using WindowFilter.Resources;
 
 namespace WindowFilter;
 
@@ -45,11 +46,11 @@ internal sealed class TrayContext : ApplicationContext
         _inactiveDot = MakeDotBitmap(InactiveDotColor, 16);
 
         // A disabled (Enabled=false) item ignores ForeColor, so keep it enabled with a no-op click.
-        _statusItem = new ToolStripMenuItem("状態: 抑止していません");
-        _stopItem = new ToolStripMenuItem("抑止を停止", null, (_, _) => Stop()) { Enabled = false };
+        _statusItem = new ToolStripMenuItem(Strings.StatusPrefix + Strings.StatusNotSuppressing);
+        _stopItem = new ToolStripMenuItem(Strings.MenuStop, null, (_, _) => Stop()) { Enabled = false };
 
         // "Suppress windows" -> submenu of options (30 min / 1 hour / ... / unlimited)
-        var suppress = new ToolStripMenuItem("ウィンドウを抑止する");
+        var suppress = new ToolStripMenuItem(Strings.MenuSuppress);
         foreach (DurationOption opt in durations)
         {
             DurationOption captured = opt;
@@ -62,7 +63,7 @@ internal sealed class TrayContext : ApplicationContext
         menu.Items.Add(suppress);
         menu.Items.Add(_stopItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("終了", null, (_, _) => ExitApp()));
+        menu.Items.Add(new ToolStripMenuItem(Strings.MenuExit, null, (_, _) => ExitApp()));
 
         _notifyIcon = new NotifyIcon
         {
@@ -85,7 +86,7 @@ internal sealed class TrayContext : ApplicationContext
         _guard.Activate(option.Duration);
         UpdateStatus();
         _notifyIcon.ShowBalloonTip(3000, "WindowFilter",
-            $"ウィンドウを抑止します（{option.Label}）", ToolTipIcon.Info);
+            Strings.BalloonSuppress(option.Label), ToolTipIcon.Info);
     }
 
     private void Stop()
@@ -112,12 +113,12 @@ internal sealed class TrayContext : ApplicationContext
         // Text changes per second only during finite suppression. Re-assigning the same string is ignored by the setter.
         string text = until switch
         {
-            { } when _guard.IsAutoActive => "抑止中（フォーカス中）",
-            { } u when u == DateTime.MaxValue => "抑止中（無制限）",
-            { } u => $"抑止中（残り {Remaining(u)}）",
-            _ => "抑止していません",
+            { } when _guard.IsAutoActive => Strings.StatusFocus,
+            { } u when u == DateTime.MaxValue => Strings.StatusUnlimited,
+            { } u => Strings.StatusRemaining(Remaining(u)),
+            _ => Strings.StatusNotSuppressing,
         };
-        _statusItem.Text = "状態: " + text;
+        _statusItem.Text = Strings.StatusPrefix + text;
         _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
     }
 

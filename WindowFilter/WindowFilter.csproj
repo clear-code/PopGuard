@@ -13,6 +13,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <!-- The exe's own icon (shown in Explorer / taskbar) -->
     <ApplicationIcon>WindowFilter.ico</ApplicationIcon>
+    <!-- Default (neutral) resources are English; ja-JP falls back to the ja satellite -->
+    <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <!-- Embed the tray icons (active = green / inactive = gray) into the exe -->

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using WindowFilter.Resources;
 
 namespace WindowFilter;
 
@@ -15,6 +16,9 @@ internal sealed class RuleFile
 
     // Whether to auto-suppress during a Windows 11 focus session (default true).
     public bool? AutoSuppressDuringFocus { get; set; }
+
+    // Display language: "auto" (default, follow the OS UI language) / "ja" / "en".
+    public string? Language { get; set; }
 }
 
 /// <summary>One suppression-duration option (JSON). minutes &lt;= 0 means unlimited.</summary>
@@ -246,6 +250,9 @@ internal static class RulesStore
             rules.Add(rule);
         }
 
+        // Apply the display-language override before building labels that use localized strings.
+        Strings.ApplyOverride(file?.Language);
+
         IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
         bool autoFocus = file?.AutoSuppressDuringFocus ?? true;
 
@@ -271,31 +278,31 @@ internal static class RulesStore
         return list;
     }
 
-    /// <summary>Default options: 30 min / 1 hour / 2 hours / 1 day / unlimited (labels are user-facing, JP).</summary>
+    /// <summary>Default options: 30 min / 1 hour / 2 hours / 1 day / unlimited (labels are localized).</summary>
     private static IReadOnlyList<DurationOption> DefaultDurations() => new List<DurationOption>
     {
-        new("30分", TimeSpan.FromMinutes(30)),
-        new("1時間", TimeSpan.FromHours(1)),
-        new("2時間", TimeSpan.FromHours(2)),
-        new("一日", TimeSpan.FromDays(1)),
-        new("無制限", null),
+        new(Strings.Dur30Min, TimeSpan.FromMinutes(30)),
+        new(Strings.Dur1Hour, TimeSpan.FromHours(1)),
+        new(Strings.Dur2Hours, TimeSpan.FromHours(2)),
+        new(Strings.Dur1Day, TimeSpan.FromDays(1)),
+        new(Strings.DurUnlimited, null),
     };
 
     private static string AutoLabel(int minutes)
     {
         if (minutes <= 0)
         {
-            return "無制限";
+            return Strings.DurUnlimited;
         }
         if (minutes % 1440 == 0)
         {
-            return $"{minutes / 1440}日";
+            return Strings.DurDays(minutes / 1440);
         }
         if (minutes % 60 == 0)
         {
-            return $"{minutes / 60}時間";
+            return Strings.DurHours(minutes / 60);
         }
-        return $"{minutes}分";
+        return Strings.DurMinutes(minutes);
     }
 
     private static void TryWriteSample()
@@ -328,6 +335,8 @@ internal static class RulesStore
                 },
                 // Auto-suppress during a Windows 11 focus session (manual Do Not Disturb is not covered).
                 AutoSuppressDuringFocus = true,
+                // Display language: "auto" (follow the OS UI language) / "ja" / "en".
+                Language = "auto",
             };
 
             var options = new JsonSerializerOptions

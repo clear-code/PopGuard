@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="MenuSuppress" xml:space="preserve">
+    <value>Suppress windows</value>
+  </data>
+  <data name="MenuStop" xml:space="preserve">
+    <value>Stop suppression</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+
+  <data name="StatusPrefix" xml:space="preserve">
+    <value>Status: </value>
+  </data>
+  <data name="StatusNotSuppressing" xml:space="preserve">
+    <value>Not suppressing</value>
+  </data>
+  <data name="StatusUnlimited" xml:space="preserve">
+    <value>Suppressing (unlimited)</value>
+  </data>
+  <data name="StatusFocus" xml:space="preserve">
+    <value>Suppressing (focus)</value>
+  </data>
+  <data name="StatusRemaining" xml:space="preserve">
+    <value>Suppressing ({0} left)</value>
+  </data>
+
+  <data name="BalloonSuppress" xml:space="preserve">
+    <value>Suppressing windows ({0})</value>
+  </data>
+
+  <data name="DurUnlimited" xml:space="preserve">
+    <value>Unlimited</value>
+  </data>
+  <data name="Dur30Min" xml:space="preserve">
+    <value>30 min</value>
+  </data>
+  <data name="Dur1Hour" xml:space="preserve">
+    <value>1 hour</value>
+  </data>
+  <data name="Dur2Hours" xml:space="preserve">
+    <value>2 hours</value>
+  </data>
+  <data name="Dur1Day" xml:space="preserve">
+    <value>1 day</value>
+  </data>
+  <data name="DurMinutesFmt" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
+  <data name="DurHoursFmt" xml:space="preserve">
+    <value>{0} h</value>
+  </data>
+  <data name="DurDaysFmt" xml:space="preserve">
+    <value>{0} d</value>
+  </data>
+</root>
