@@ -10,13 +10,12 @@ internal sealed class WindowReporter
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMilliseconds(1500);
 
     private readonly object _lock = new();
-    private readonly Dictionary<string, DateTime> _recent = new();
+    private readonly Dictionary<long, DateTime> _recent = new(); // keyed by HWND
 
-    /// <summary>Report a window picked up via Win32 (EnumWindows). The key is the HWND.</summary>
+    /// <summary>Report a window picked up via Win32 (EnumWindows).</summary>
     public void Report(string kind, IntPtr hwnd, string process, string title)
     {
-        string key = "h" + hwnd.ToInt64();
-        if (key == "h0" || IsDuplicate(key))
+        if (hwnd == IntPtr.Zero || IsDuplicate(hwnd.ToInt64()))
         {
             return;
         }
@@ -24,7 +23,7 @@ internal sealed class WindowReporter
         Logger.Line($"window {kind}: process={process} title={title}");
     }
 
-    private bool IsDuplicate(string key)
+    private bool IsDuplicate(long key)
     {
         DateTime now = DateTime.UtcNow;
 
@@ -40,7 +39,7 @@ internal sealed class WindowReporter
 
             if (_recent.Count > 256)
             {
-                foreach (string k in _recent
+                foreach (long k in _recent
                              .Where(kv => now - kv.Value >= DedupWindow)
                              .Select(kv => kv.Key).ToList())
                 {
