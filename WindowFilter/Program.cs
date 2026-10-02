@@ -28,6 +28,11 @@ internal static class Program
             var poller = new TopLevelPoller(reporter, windowFilter);
             poller.Start();
 
+            // Immediate detection of new windows via WinEvent hook (installed on this STA thread,
+            // delivered once Application.Run pumps messages). The poller remains the safety net.
+            var eventWatcher = new WindowEventWatcher(windowFilter);
+            eventWatcher.Start();
+
             // Focus-session sync (subscribe on the STA thread; auto-suppress via events).
             var focus = new FocusSessionWatcher(windowFilter, config.AutoSuppressDuringFocus);
             focus.Start();
@@ -38,6 +43,7 @@ internal static class Program
             ApplicationConfiguration.Initialize();
             Application.Run(new TrayContext(windowFilter, config.Durations));
 
+            eventWatcher.Stop();
             poller.Stop();
             windowFilter.RestoreAll();
         }
