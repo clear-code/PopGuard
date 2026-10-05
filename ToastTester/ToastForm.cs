@@ -4,7 +4,7 @@ namespace ToastTester;
 /// 右下に出るトースト風のポップアップ。数秒で自動的に閉じる。
 /// 実際のトースト（Thunderbird の通知など）に近づけるため、
 /// 最前面（TOPMOST）・非アクティブ化・ツールウィンドウ（タスクバー非表示）にしてある。
-/// これにより WindowFilter の「TOPMOST の独立ウィンドウを裏へ送る」動作を試せる。
+/// これにより PopGuard の「TOPMOST の独立ウィンドウを裏へ送る」動作を試せる。
 /// </summary>
 internal sealed class ToastForm : Form
 {

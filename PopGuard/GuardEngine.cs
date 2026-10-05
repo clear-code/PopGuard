@@ -91,8 +91,8 @@ internal sealed class GuardEngine
             _autoActive = false; // manual action
         }
         Logger.Line(duration is { } dd
-            ? $"windowFilter: suppression started ({dd.TotalMinutes:0} min)"
-            : "windowFilter: suppression started (unlimited)");
+            ? $"guardEngine: suppression started ({dd.TotalMinutes:0} min)"
+            : "guardEngine: suppression started (unlimited)");
     }
 
     /// <summary>Stop suppression and restore the windows that were pushed back.</summary>
@@ -108,7 +108,7 @@ internal sealed class GuardEngine
         if (wasActive)
         {
             RestoreAll();
-            Logger.Line($"windowFilter: suppression ended ({reason})");
+            Logger.Line($"guardEngine: suppression ended ({reason})");
         }
     }
 
@@ -143,12 +143,12 @@ internal sealed class GuardEngine
 
         if (started)
         {
-            Logger.Line("windowFilter: suppression started (focus active)");
+            Logger.Line("guardEngine: suppression started (focus active)");
         }
         if (ended)
         {
             RestoreAll();
-            Logger.Line("windowFilter: suppression ended (focus ended)");
+            Logger.Line("guardEngine: suppression ended (focus ended)");
         }
     }
 
@@ -168,7 +168,7 @@ internal sealed class GuardEngine
         if (expired)
         {
             RestoreAll();
-            Logger.Line("windowFilter: suppression ended (time expired)");
+            Logger.Line("guardEngine: suppression ended (time expired)");
         }
     }
 
@@ -236,7 +236,7 @@ internal sealed class GuardEngine
             }
             if (firstTime)
             {
-                Logger.Line($"windowFilter skip: process={process} title={title} (likely dialog: {modalReason})");
+                Logger.Line($"guardEngine: skip: process={process} title={title} (likely dialog: {modalReason})");
             }
             return;
         }
@@ -262,7 +262,7 @@ internal sealed class GuardEngine
 
             Demote(hwnd);
             SendBack(hwnd, t.Applied);
-            Logger.Line($"windowFilter demote: process={t.Process} title={t.Title} method={t.Applied}");
+            Logger.Line($"guardEngine: demote: process={t.Process} title={t.Title} method={t.Applied}");
         }
     }
 

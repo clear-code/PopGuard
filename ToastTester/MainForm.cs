@@ -4,7 +4,7 @@ namespace ToastTester;
 
 /// <summary>
 /// テスト用の操作ウィンドウ。ボタンで、または一定間隔で右下にトーストを表示する。
-/// トースト側が WindowFilter の検知・裏送り対象（TOPMOST の独立ウィンドウ）になる。
+/// トースト側が PopGuard の検知・裏送り対象（TOPMOST の独立ウィンドウ）になる。
 /// </summary>
 internal sealed class MainForm : Form
 {
@@ -84,7 +84,7 @@ internal sealed class MainForm : Form
 
     /// <summary>
     /// 本物の OS トーストを表示する。描画・表示位置・消滅は OS の通知プラットフォームが行い、
-    /// アプリはウィンドウを持たない（WindowFilter では抑止できない種類）。
+    /// アプリはウィンドウを持たない（PopGuard では抑止できない種類）。
     /// 非パッケージ Win32 アプリの AUMID 登録は ToastContentBuilder（Compat 層）が肩代わりする。
     /// </summary>
     private void ShowOsToast()
@@ -106,7 +106,7 @@ internal sealed class MainForm : Form
 
     /// <summary>
     /// モーダルウィンドウを表示する。ShowDialog でオーナー（このウィンドウ）が無効化され、
-    /// かつ TOPMOST なので、WindowFilter のモーダル回避ガードの確認に使える。
+    /// かつ TOPMOST なので、PopGuard のモーダル回避ガードの確認に使える。
     /// </summary>
     private void ShowModal()
     {

@@ -7,15 +7,15 @@ namespace PopGuard;
 /// </summary>
 internal sealed class FocusSessionWatcher
 {
-    private readonly GuardEngine _windowFilter;
+    private readonly GuardEngine _guardEngine;
     private readonly bool _autoSuppress;
 
     // Hold the reference so the event subscription is not collected by GC.
     private Windows.UI.Shell.FocusSessionManager? _manager;
 
-    public FocusSessionWatcher(GuardEngine windowFilter, bool autoSuppress)
+    public FocusSessionWatcher(GuardEngine guardEngine, bool autoSuppress)
     {
-        _windowFilter = windowFilter;
+        _guardEngine = guardEngine;
         _autoSuppress = autoSuppress;
     }
 
@@ -47,7 +47,7 @@ internal sealed class FocusSessionWatcher
             // If focus is already active at startup, reflect it.
             if (_autoSuppress && active)
             {
-                _windowFilter.OnFocusChanged(true);
+                _guardEngine.OnFocusChanged(true);
             }
         }
         catch (Exception ex)
@@ -63,7 +63,7 @@ internal sealed class FocusSessionWatcher
 
         if (_autoSuppress)
         {
-            _windowFilter.OnFocusChanged(active);
+            _guardEngine.OnFocusChanged(active);
         }
     }
 }

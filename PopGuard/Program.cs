@@ -8,16 +8,16 @@ internal static class Program
     private static void Main()
     {
         AppConfig config = RulesStore.Load();
-        var windowFilter = new GuardEngine(config.Rules);
+        var engine = new GuardEngine(config.Rules);
 
         // Always restore pushed-back windows on failure/exit so none are left behind.
         AppDomain.CurrentDomain.UnhandledException += (_, _) =>
         {
-            try { windowFilter.RestoreAll(); } catch { /* ignore restore failure */ }
+            try { engine.RestoreAll(); } catch { /* ignore restore failure */ }
         };
         AppDomain.CurrentDomain.ProcessExit += (_, _) =>
         {
-            try { windowFilter.RestoreAll(); } catch { /* ignore restore failure */ }
+            try { engine.RestoreAll(); } catch { /* ignore restore failure */ }
         };
 
         Logger.Line("PopGuard: starting");
@@ -25,32 +25,32 @@ internal static class Program
         try
         {
             var reporter = new WindowReporter();
-            var poller = new TopLevelPoller(reporter, windowFilter);
+            var poller = new TopLevelPoller(reporter, engine);
             poller.Start();
 
             // Immediate detection of new windows via WinEvent hook (installed on this STA thread,
             // delivered once Application.Run pumps messages). The poller remains the safety net.
-            var eventWatcher = new WindowEventWatcher(windowFilter);
+            var eventWatcher = new WindowEventWatcher(engine);
             eventWatcher.Start();
 
             // Focus-session sync (subscribe on the STA thread; auto-suppress via events).
-            var focus = new FocusSessionWatcher(windowFilter, config.AutoSuppressDuringFocus);
+            var focus = new FocusSessionWatcher(engine, config.AutoSuppressDuringFocus);
             focus.Start();
 
             Logger.Line("PopGuard: started");
 
             // Reside in the tray. Suppression is enabled manually (menu) and via focus-session sync.
             ApplicationConfiguration.Initialize();
-            Application.Run(new TrayContext(windowFilter, config.Durations));
+            Application.Run(new TrayContext(engine, config.Durations));
 
             eventWatcher.Stop();
             poller.Stop();
-            windowFilter.RestoreAll();
+            engine.RestoreAll();
         }
         catch (Exception ex)
         {
             Logger.Line("PopGuard: fatal " + ex);
-            windowFilter.RestoreAll();
+            engine.RestoreAll();
         }
     }
 }

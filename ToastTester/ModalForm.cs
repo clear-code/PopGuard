@@ -2,7 +2,7 @@ namespace ToastTester;
 
 /// <summary>
 /// テスト用のモーダルウィンドウ。TOPMOST かつモーダル（ShowDialog でオーナーを無効化、
-/// FixedDialog でモーダルフレーム）にしてあり、WindowFilter のモーダル回避ガードで
+/// FixedDialog でモーダルフレーム）にしてあり、PopGuard のモーダル回避ガードで
 /// 「抑止されない（guard skip）」ことを確認するためのもの。
 /// </summary>
 internal sealed class ModalForm : Form
@@ -12,7 +12,7 @@ internal sealed class ModalForm : Form
         Text = "ToastTester Modal"; // ルール照合用のタイトル
         FormBorderStyle = FormBorderStyle.FixedDialog; // DS_MODALFRAME → WS_EX_DLGMODALFRAME
         StartPosition = FormStartPosition.CenterScreen;
-        TopMost = true;              // 最前面（WindowFilter の対象条件を満たす）
+        TopMost = true;              // 最前面（PopGuard の対象条件を満たす）
         ShowInTaskbar = false;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -21,7 +21,7 @@ internal sealed class ModalForm : Form
         Controls.Add(new Label
         {
             Text = "これはモーダルウィンドウです。\n"
-                 + "TOPMOST ですが、WindowFilter には抑止されず前面のままになります。",
+                 + "TOPMOST ですが、PopGuard には抑止されず前面のままになります。",
             Dock = DockStyle.Top,
             Height = 70,
             TextAlign = ContentAlignment.MiddleCenter,

@@ -10,11 +10,11 @@ namespace PopGuard;
 /// </summary>
 internal sealed class WindowEventWatcher
 {
-    private readonly GuardEngine _windowFilter;
+    private readonly GuardEngine _guardEngine;
     private WinEventDelegate? _proc; // keep a reference so the callback is not collected by GC
     private IntPtr _hook;
 
-    public WindowEventWatcher(GuardEngine windowFilter) => _windowFilter = windowFilter;
+    public WindowEventWatcher(GuardEngine guardEngine) => _guardEngine = guardEngine;
 
     public void Start()
     {
@@ -56,7 +56,7 @@ internal sealed class WindowEventWatcher
 
         try
         {
-            _windowFilter.Consider(hwnd);
+            _guardEngine.Consider(hwnd);
         }
         catch
         {
