@@ -1,4 +1,4 @@
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Reports a detected window as a single log line. Polling runs on a separate (timer) thread,

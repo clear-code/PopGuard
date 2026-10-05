@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Win32 helper for enumerating top-level windows and getting their info.

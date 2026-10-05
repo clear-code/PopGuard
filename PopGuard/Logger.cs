@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Writes log lines to a file. Opens and closes the file for each write, and rotates by
@@ -14,11 +14,11 @@ internal sealed class Logger
 
     private const long DefaultMaxLogSize = 10 * 1024 * 1024;
 
-    private const string LogFileNameBase = "WindowFilter";
+    private const string LogFileNameBase = "PopGuard";
 
     // The file is only open during a write, so guard rotation with a mutex so it does not happen
     // in the middle of another writer (handles multiple instances on the same machine).
-    private static readonly Mutex FileMutex = new(false, @"Local\WindowFilter.Logger");
+    private static readonly Mutex FileMutex = new(false, @"Local\PopGuard.Logger");
 
     private static readonly TimeSpan MutexTimeout = TimeSpan.FromSeconds(5);
 
@@ -64,7 +64,7 @@ internal sealed class Logger
     private static string DefaultDirectory() =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "WindowFilter");
+            "PopGuard");
 
     private static void NoException(Action func)
     {

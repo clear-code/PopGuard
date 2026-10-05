@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Resources;
 
-namespace WindowFilter.Resources;
+namespace PopGuard.Resources;
 
 /// <summary>
 /// Typed accessor for the localized display strings in Strings.resx / Strings.ja.resx.
@@ -10,7 +10,7 @@ namespace WindowFilter.Resources;
 internal static class Strings
 {
     private static readonly ResourceManager Rm =
-        new("WindowFilter.Resources.Strings", typeof(Strings).Assembly);
+        new("PopGuard.Resources.Strings", typeof(Strings).Assembly);
 
     /// <summary>Override the display language. null = follow CurrentUICulture.</summary>
     public static CultureInfo? Culture { get; set; }

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// P/Invoke definitions for enumerating windows, getting their info, and changing Z order/visibility.
@@ -117,4 +117,19 @@ internal static class NativeMethods
 
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    // Notification state (Do Not Disturb / focus / full-screen, etc.) query — diagnostic use
+    public enum QUERY_USER_NOTIFICATION_STATE
+    {
+        QUNS_NOT_PRESENT = 1,             // not logged on, etc.
+        QUNS_BUSY = 2,                    // a full-screen app is running (not receiving notifications)
+        QUNS_RUNNING_D3D_FULL_SCREEN = 3, // full-screen D3D
+        QUNS_PRESENTATION_MODE = 4,       // presentation mode
+        QUNS_ACCEPTS_NOTIFICATIONS = 5,   // normal (notifications allowed)
+        QUNS_QUIET_TIME = 6,              // Do Not Disturb / focus (quiet time)
+        QUNS_APP = 7,                     // a full-screen (Store) app
+    }
+
+    [DllImport("shell32.dll")]
+    public static extern int SHQueryUserNotificationState(out QUERY_USER_NOTIFICATION_STATE pquns);
 }

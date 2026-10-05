@@ -2,9 +2,9 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using WindowFilter.Resources;
+using PopGuard.Resources;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>Shape of one config JSON file.</summary>
 internal sealed class RuleFile
@@ -87,7 +87,7 @@ internal sealed class TargetRule
     public HideMethod Hide { get; }
 
     /// <summary>
-    /// Whether to target only TOPMOST windows. [Currently unused by WindowFilter.]
+    /// Whether to target only TOPMOST windows. [Currently unused by PopGuard.]
     /// Parsed so the config is preserved, but not used in matching (always TOPMOST-only).
     /// </summary>
     public bool TopMostOnly { get; }
@@ -198,7 +198,7 @@ internal static class Wildcard
 /// <summary>Loads the rule config file (JSON). Writes a sample if it does not exist.</summary>
 internal static class RulesStore
 {
-    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "WindowFilter.rules.json");
+    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "PopGuard.rules.json");
 
     private static readonly JsonSerializerOptions ReadOptions = new()
     {

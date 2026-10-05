@@ -1,22 +1,23 @@
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Periodically scans top-level windows (enumerated via Win32 EnumWindows) and reports newly
 /// appeared ones. It detects, without relying on events, popups that do not raise WindowOpenedEvent
 /// and do not appear directly under the UIA root (e.g. Thunderbird's notifications).
-/// It also evaluates each window with WindowFilter and pushes rule-matched ones to the back.
+/// It also evaluates each window with GuardEngine and pushes rule-matched ones to the back.
 /// </summary>
 internal sealed class TopLevelPoller
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(700);
 
     private readonly WindowReporter _reporter;
-    private readonly WindowFilter _guard;
+    private readonly GuardEngine _guard;
+    private readonly NotificationStateWatcher _notifState = new(); // diagnostic: DND/quiet-time logging
     private readonly HashSet<long> _known = new(); // single timer callback, so no locking needed
     // Referencing WinForms makes the name Timer ambiguous; be explicit about the thread-pool Timer.
     private System.Threading.Timer? _timer;
 
-    public TopLevelPoller(WindowReporter reporter, WindowFilter guard)
+    public TopLevelPoller(WindowReporter reporter, GuardEngine guard)
     {
         _reporter = reporter;
         _guard = guard;
@@ -45,6 +46,9 @@ internal sealed class TopLevelPoller
         {
             // Release/restore if the suppression expiry has passed.
             _guard.CheckExpiry();
+
+            // Diagnostic: log notification-state changes (to confirm DND -> QUNS_QUIET_TIME).
+            _notifState.Poll();
 
             List<IntPtr> current = Win32Windows.EnumerateVisibleTopLevel();
 

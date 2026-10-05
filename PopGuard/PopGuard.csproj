@@ -8,11 +8,11 @@
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>WindowFilter</AssemblyName>
+    <AssemblyName>PopGuard</AssemblyName>
     <!-- Use WinForms for the system-tray residence (NotifyIcon) -->
     <UseWindowsForms>true</UseWindowsForms>
     <!-- The exe's own icon (shown in Explorer / taskbar) -->
-    <ApplicationIcon>WindowFilter.ico</ApplicationIcon>
+    <ApplicationIcon>PopGuard.ico</ApplicationIcon>
     <!-- Default (neutral) resources are English; ja-JP falls back to the ja satellite -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>

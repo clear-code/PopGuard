@@ -2,9 +2,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
-using WindowFilter.Resources;
+using PopGuard.Resources;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Resides in the system tray and enables window suppression for a limited time from the menu.
@@ -20,7 +20,7 @@ internal sealed class TrayContext : ApplicationContext
     private static readonly Color ActiveDotColor = Color.FromArgb(46, 204, 113);
     private static readonly Color InactiveDotColor = Color.FromArgb(150, 150, 150);
 
-    private readonly WindowFilter _guard;
+    private readonly GuardEngine _guard;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _stopItem;
@@ -36,7 +36,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private bool? _lastActive; // starts null so the first update is always applied
 
-    public TrayContext(WindowFilter guard, IReadOnlyList<DurationOption> durations)
+    public TrayContext(GuardEngine guard, IReadOnlyList<DurationOption> durations)
     {
         _guard = guard;
 
@@ -68,7 +68,7 @@ internal sealed class TrayContext : ApplicationContext
         _notifyIcon = new NotifyIcon
         {
             Icon = _inactiveIcon,
-            Text = "WindowFilter",
+            Text = "PopGuard",
             Visible = true,
             ContextMenuStrip = menu,
         };
@@ -85,7 +85,7 @@ internal sealed class TrayContext : ApplicationContext
     {
         _guard.Activate(option.Duration);
         UpdateStatus();
-        _notifyIcon.ShowBalloonTip(3000, "WindowFilter",
+        _notifyIcon.ShowBalloonTip(3000, "PopGuard",
             Strings.BalloonSuppress(option.Label), ToolTipIcon.Info);
     }
 
@@ -119,7 +119,7 @@ internal sealed class TrayContext : ApplicationContext
             _ => Strings.StatusNotSuppressing,
         };
         _statusItem.Text = Strings.StatusPrefix + text;
-        _notifyIcon.Text = active ? "WindowFilter — " + text : "WindowFilter";
+        _notifyIcon.Text = active ? "PopGuard — " + text : "PopGuard";
     }
 
     /// <summary>A colored dot shown next to the status label (for the menu item image).</summary>

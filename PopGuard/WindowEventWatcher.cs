@@ -1,20 +1,20 @@
-using static WindowFilter.NativeMethods;
+using static PopGuard.NativeMethods;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
 /// Listens for window create/show events (SetWinEventHook) and immediately evaluates the new
-/// top-level window with WindowFilter, so matched popups are pushed back with minimal visible time.
+/// top-level window with PopGuard, so matched popups are pushed back with minimal visible time.
 /// Complements the polling safety net (events can miss some cases; the poller catches stragglers).
 /// Must be started on an STA thread that runs a message loop (OUTOFCONTEXT events are delivered there).
 /// </summary>
 internal sealed class WindowEventWatcher
 {
-    private readonly WindowFilter _windowFilter;
+    private readonly GuardEngine _windowFilter;
     private WinEventDelegate? _proc; // keep a reference so the callback is not collected by GC
     private IntPtr _hook;
 
-    public WindowEventWatcher(WindowFilter windowFilter) => _windowFilter = windowFilter;
+    public WindowEventWatcher(GuardEngine windowFilter) => _windowFilter = windowFilter;
 
     public void Start()
     {

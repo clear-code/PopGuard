@@ -1,6 +1,6 @@
 using System.Windows.Forms;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 internal static class Program
 {
@@ -8,7 +8,7 @@ internal static class Program
     private static void Main()
     {
         AppConfig config = RulesStore.Load();
-        var windowFilter = new WindowFilter(config.Rules);
+        var windowFilter = new GuardEngine(config.Rules);
 
         // Always restore pushed-back windows on failure/exit so none are left behind.
         AppDomain.CurrentDomain.UnhandledException += (_, _) =>
@@ -20,7 +20,7 @@ internal static class Program
             try { windowFilter.RestoreAll(); } catch { /* ignore restore failure */ }
         };
 
-        Logger.Line("WindowFilter: starting");
+        Logger.Line("PopGuard: starting");
 
         try
         {
@@ -37,7 +37,7 @@ internal static class Program
             var focus = new FocusSessionWatcher(windowFilter, config.AutoSuppressDuringFocus);
             focus.Start();
 
-            Logger.Line("WindowFilter: started");
+            Logger.Line("PopGuard: started");
 
             // Reside in the tray. Suppression is enabled manually (menu) and via focus-session sync.
             ApplicationConfiguration.Initialize();
@@ -49,7 +49,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Logger.Line("WindowFilter: fatal " + ex);
+            Logger.Line("PopGuard: fatal " + ex);
             windowFilter.RestoreAll();
         }
     }

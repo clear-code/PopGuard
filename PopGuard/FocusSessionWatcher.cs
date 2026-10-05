@@ -1,19 +1,19 @@
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>
-/// Subscribes to the Windows 11 focus (focus session) state and relays changes to <see cref="WindowFilter"/>.
+/// Subscribes to the Windows 11 focus (focus session) state and relays changes to <see cref="GuardEngine"/>.
 /// When auto-suppress is enabled, suppression is turned on while focus is active and off when it ends
 /// (manual actions are respected). Manual "Do Not Disturb" alone does not change IsFocusActive, so it is not covered.
 /// </summary>
 internal sealed class FocusSessionWatcher
 {
-    private readonly WindowFilter _windowFilter;
+    private readonly GuardEngine _windowFilter;
     private readonly bool _autoSuppress;
 
     // Hold the reference so the event subscription is not collected by GC.
     private Windows.UI.Shell.FocusSessionManager? _manager;
 
-    public FocusSessionWatcher(WindowFilter windowFilter, bool autoSuppress)
+    public FocusSessionWatcher(GuardEngine windowFilter, bool autoSuppress)
     {
         _windowFilter = windowFilter;
         _autoSuppress = autoSuppress;

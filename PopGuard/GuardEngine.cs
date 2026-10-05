@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Text;
-using static WindowFilter.NativeMethods;
+using static PopGuard.NativeMethods;
 
-namespace WindowFilter;
+namespace PopGuard;
 
 /// <summary>How a matched window is pushed out of the way.</summary>
 internal enum HideMethod
@@ -19,7 +19,7 @@ internal enum HideMethod
 /// The only Win32 APIs called are SetWindowPos / ShowWindowAsync.
 /// It never kills processes or modifies files/registry.
 /// </summary>
-internal sealed class WindowFilter
+internal sealed class GuardEngine
 {
     private sealed class Tracked
     {
@@ -44,7 +44,7 @@ internal sealed class WindowFilter
     private DateTime? _activeUntil;
     private bool _autoActive; // whether activation came from focus-session sync
 
-    public WindowFilter(IReadOnlyList<TargetRule> rules) => _rules = rules;
+    public GuardEngine(IReadOnlyList<TargetRule> rules) => _rules = rules;
 
     /// <summary>Whether suppression is currently active.</summary>
     public bool IsActive
