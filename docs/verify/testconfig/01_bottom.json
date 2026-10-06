@@ -1,0 +1,12 @@
+{
+  "rules": [
+    { "enabled": true, "process": "ToastTester", "title": "ToastTester Toast", "class": "", "hide": "Bottom", "topMostOnly": true }
+  ],
+  "durations": [
+    { "label": "1分", "minutes": 1 },
+    { "label": "30分", "minutes": 30 },
+    { "label": "無制限", "minutes": 0 }
+  ],
+  "autoSuppressDuringFocus": false,
+  "language": "ja"
+}
