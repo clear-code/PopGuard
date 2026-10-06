@@ -76,11 +76,12 @@ internal sealed class RuleEntry
 
 /// <summary>
 /// A rule with wildcards pre-compiled for matching.
-/// Process name is required. An empty title/class means "match anything".
+/// A wildcard-only process name ("*") means "match any process" (suppress every popup);
+/// an empty title/class also means "match anything".
 /// </summary>
 internal sealed class TargetRule
 {
-    private readonly Regex _process;   // required, so non-null
+    private readonly Regex? _process;  // null = match any process (e.g. "*")
     private readonly Regex? _title;    // null = no filter
     private readonly Regex? _class;    // null = no filter
 
@@ -92,7 +93,7 @@ internal sealed class TargetRule
     /// </summary>
     public bool TopMostOnly { get; }
 
-    private TargetRule(Regex process, Regex? title, Regex? className, HideMethod hide, bool topMostOnly)
+    private TargetRule(Regex? process, Regex? title, Regex? className, HideMethod hide, bool topMostOnly)
     {
         _process = process;
         _title = title;
@@ -102,28 +103,32 @@ internal sealed class TargetRule
     }
 
     /// <summary>Cheap process-name-only pre-check (to sieve out candidates before the title lookup).</summary>
-    public bool MatchesProcess(string process) => _process.IsMatch(process ?? string.Empty);
+    public bool MatchesProcess(string process) => _process is null || _process.IsMatch(process ?? string.Empty);
 
     /// <summary>Match on process, class, and title.</summary>
     public bool Matches(string process, string className, string title)
-        => _process.IsMatch(process ?? string.Empty)
+        => (_process is null || _process.IsMatch(process ?? string.Empty))
            && (_class is null || _class.IsMatch(className ?? string.Empty))
            && (_title is null || _title.IsMatch(title ?? string.Empty));
 
     /// <summary>
-    /// Build a rule from a JSON entry. An empty or wildcard-only process name is rejected
-    /// (it would match anything), returning null.
+    /// Build a rule from a JSON entry. An empty/whitespace process name is rejected (returns null):
+    /// a blank field is treated as a config mistake. A wildcard-only process name ("*") is accepted
+    /// and means "match any process" (suppress every popup), compiling to a null process matcher.
     /// </summary>
     public static TargetRule? TryCreate(RuleEntry e, out string? invalidReason)
     {
         invalidReason = null;
 
-        Regex? process = Wildcard.Compile(e.Process);
-        if (process is null)
+        if (string.IsNullOrWhiteSpace(e.Process))
         {
-            invalidReason = "process is empty or only * / ?";
+            invalidReason = "process is empty";
             return null;
         }
+
+        // Wildcard.Compile returns null for a wildcard-only pattern ("*"); here that means
+        // "match any process" rather than "no filter", because an empty name was already rejected.
+        Regex? process = Wildcard.Compile(e.Process);
 
         Regex? title = Wildcard.Compile(e.Title);
         Regex? className = Wildcard.Compile(e.Class);

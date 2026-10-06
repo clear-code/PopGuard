@@ -9,13 +9,26 @@ public class TargetRuleTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    [InlineData("*")]
-    [InlineData("?")]
-    public void TryCreate_EmptyOrWildcardOnlyProcess_IsInvalid(string? process)
+    public void TryCreate_EmptyProcess_IsInvalid(string? process)
     {
         var rule = TargetRule.TryCreate(new RuleEntry { Process = process }, out string? reason);
         Assert.Null(rule);
         Assert.False(string.IsNullOrEmpty(reason));
+    }
+
+    [Theory]
+    [InlineData("*")]
+    [InlineData("?")]
+    [InlineData("**")]
+    public void TryCreate_WildcardOnlyProcess_MatchesAnyProcess(string process)
+    {
+        var rule = TargetRule.TryCreate(new RuleEntry { Process = process }, out string? reason);
+        Assert.NotNull(rule);
+        Assert.Null(reason);
+        // "*" means "suppress every popup": any process name matches.
+        Assert.True(rule!.MatchesProcess("ToastTester"));
+        Assert.True(rule.MatchesProcess("anything.else"));
+        Assert.True(rule.Matches("whatever", "AnyClass", "Any Title"));
     }
 
     [Fact]
