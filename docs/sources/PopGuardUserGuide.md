@@ -126,10 +126,10 @@ PopGuardの設定は、**システム管理者が管理します。利用者が�
 PopGuardの動作記録（ログ）は、次の場所に保存されます。
 
 ```
-%APPDATA%\PopGuard\PopGuard.log
+%LOCALAPPDATA%\PopGuard\PopGuard.log
 ```
 
-（通常は `C:\Users\<ユーザー名>\AppData\Roaming\PopGuard\PopGuard.log`）
+（通常は `C:\Users\<ユーザー名>\AppData\Local\PopGuard\PopGuard.log`）
 
 ログには、抑止の開始・終了や、裏へ送った／戻したウィンドウの記録が残ります。
 記録の内容についてはシステム管理者へお問い合わせください。

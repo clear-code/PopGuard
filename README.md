@@ -130,7 +130,7 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 
 ## ログ
 
-- 出力先：`%APPDATA%\PopGuard\PopGuard.log`（ユーザーごと）。
+- 出力先：`%LOCALAPPDATA%\PopGuard\PopGuard.log`（ユーザーごと）。
 - 書き込みのたびに開閉し、**10MB 超で世代ローテーション**（`PopGuard_1.log`〜`_10.log`）。
 - 複数インスタンス/スレッドに備え名前付き Mutex（`Local\PopGuard.Logger`）で直列化。
 - Debug ビルドでは `Debug.WriteLine` にも出力（`[Conditional("DEBUG")]`）。

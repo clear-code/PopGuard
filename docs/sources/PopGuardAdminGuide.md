@@ -175,7 +175,7 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 PopGuardは動作記録を次のファイルに出力します（ユーザーごと）。
 
 ```
-%APPDATA%\PopGuard\PopGuard.log
+%LOCALAPPDATA%\PopGuard\PopGuard.log
 ```
 
 * 1 行 1 レコードのテキスト（先頭に `yyyy-MM-dd HH:mm:ss` のタイムスタンプ）。

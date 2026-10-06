@@ -63,7 +63,7 @@ internal sealed class Logger
 
     private static string DefaultDirectory() =>
         Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "PopGuard");
 
     private static void NoException(Action func)
