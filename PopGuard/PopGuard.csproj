@@ -23,4 +23,9 @@
     <EmbeddedResource Include="Assets\tray_inactive.ico" />
   </ItemGroup>
 
+  <!-- Expose internals to the unit test project -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="PopGuard.Tests" />
+  </ItemGroup>
+
 </Project>
