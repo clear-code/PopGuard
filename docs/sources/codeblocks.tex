@@ -1,0 +1,8 @@
+% Long lines in code blocks wrap instead of running off the page.
+% Highlighting already has breaklines, but that only breaks at spaces, and a URL
+% inside \StringTok{...} has none: breaknonspaceingroup lets it break in there.
+% A code block without a language is plain verbatim, which never breaks, so it
+% is moved onto fvextra too.
+\usepackage{fvextra}
+\fvset{breaklines,breakanywhere,breaknonspaceingroup}
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{}
