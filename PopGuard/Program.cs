@@ -37,12 +37,17 @@ internal static class Program
             var focus = new FocusSessionWatcher(engine, config.AutoSuppressDuringFocus);
             focus.Start();
 
+            // Microphone sync (poll; auto-suppress while the mic is in use, e.g. during a meeting).
+            var mic = new MicrophoneWatcher(engine, config.AutoSuppressDuringMicrophone);
+            mic.Start();
+
             Logger.Line("PopGuard: started");
 
             // Reside in the tray. Suppression is enabled manually (menu) and via focus-session sync.
             ApplicationConfiguration.Initialize();
             Application.Run(new TrayContext(engine, config.Durations));
 
+            mic.Stop();
             eventWatcher.Stop();
             poller.Stop();
             engine.RestoreAll();

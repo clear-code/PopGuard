@@ -17,6 +17,9 @@ internal sealed class RuleFile
     // Whether to auto-suppress during a Windows 11 focus session (default true).
     public bool? AutoSuppressDuringFocus { get; set; }
 
+    // Whether to auto-suppress while the microphone is in use, e.g. during a call/meeting (default true).
+    public bool? AutoSuppressDuringMicrophone { get; set; }
+
     // Display language: "auto" (default, follow the OS UI language) / "ja" / "en".
     public string? Language { get; set; }
 }
@@ -47,15 +50,18 @@ internal sealed class AppConfig
     public IReadOnlyList<TargetRule> Rules { get; }
     public IReadOnlyList<DurationOption> Durations { get; }
     public bool AutoSuppressDuringFocus { get; }
+    public bool AutoSuppressDuringMicrophone { get; }
 
     public AppConfig(
         IReadOnlyList<TargetRule> rules,
         IReadOnlyList<DurationOption> durations,
-        bool autoSuppressDuringFocus)
+        bool autoSuppressDuringFocus,
+        bool autoSuppressDuringMicrophone)
     {
         Rules = rules;
         Durations = durations;
         AutoSuppressDuringFocus = autoSuppressDuringFocus;
+        AutoSuppressDuringMicrophone = autoSuppressDuringMicrophone;
     }
 }
 
@@ -218,7 +224,7 @@ internal static class RulesStore
         {
             TryWriteSample();
             Logger.Line("rules: file not found, wrote a sample. Nothing will be suppressed. path=" + FilePath);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, true);
         }
 
         RuleFile? file;
@@ -229,7 +235,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: failed to read JSON (nothing will be suppressed): " + ex.Message);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, true);
         }
 
         var rules = new List<TargetRule>();
@@ -260,9 +266,10 @@ internal static class RulesStore
 
         IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
         bool autoFocus = file?.AutoSuppressDuringFocus ?? true;
+        bool autoMic = file?.AutoSuppressDuringMicrophone ?? true;
 
-        Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} path={FilePath}");
-        return new AppConfig(rules, durations, autoFocus);
+        Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} micSync={autoMic} path={FilePath}");
+        return new AppConfig(rules, durations, autoFocus, autoMic);
     }
 
     /// <summary>Compile the duration options. Use the defaults when empty/omitted.</summary>
@@ -340,6 +347,8 @@ internal static class RulesStore
                 },
                 // Auto-suppress during a Windows 11 focus session (manual Do Not Disturb is not covered).
                 AutoSuppressDuringFocus = true,
+                // Auto-suppress while the microphone is in use (e.g. during a call/meeting).
+                AutoSuppressDuringMicrophone = true,
                 // Display language: "auto" (follow the OS UI language) / "ja" / "en".
                 Language = "auto",
             };

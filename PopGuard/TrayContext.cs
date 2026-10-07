@@ -113,7 +113,7 @@ internal sealed class TrayContext : ApplicationContext
         // Text changes per second only during finite suppression. Re-assigning the same string is ignored by the setter.
         string text = until switch
         {
-            { } when _guard.IsAutoActive => Strings.StatusFocus,
+            { } when _guard.IsAutoActive => AutoStatusText(_guard.AutoReason),
             { } u when u == DateTime.MaxValue => Strings.StatusUnlimited,
             { } u => Strings.StatusRemaining(Remaining(u)),
             _ => Strings.StatusNotSuppressing,
@@ -121,6 +121,14 @@ internal sealed class TrayContext : ApplicationContext
         _statusItem.Text = Strings.StatusPrefix + text;
         _notifyIcon.Text = active ? "PopGuard — " + text : "PopGuard";
     }
+
+    /// <summary>Status label for auto-suppression, naming the condition that triggered it.</summary>
+    private static string AutoStatusText(AutoSuppressReason reason) => reason switch
+    {
+        AutoSuppressReason.Microphone => Strings.StatusMic,
+        AutoSuppressReason.Multiple => Strings.StatusAuto,
+        _ => Strings.StatusFocus,
+    };
 
     /// <summary>A colored dot shown next to the status label (for the menu item image).</summary>
     private static Bitmap MakeDotBitmap(Color color, int size)

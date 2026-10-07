@@ -35,6 +35,12 @@
   <data name="StatusFocus" xml:space="preserve">
     <value>抑止中（フォーカス中）</value>
   </data>
+  <data name="StatusMic" xml:space="preserve">
+    <value>抑止中（マイク使用中）</value>
+  </data>
+  <data name="StatusAuto" xml:space="preserve">
+    <value>抑止中（自動）</value>
+  </data>
   <data name="StatusRemaining" xml:space="preserve">
     <value>抑止中（残り {0}）</value>
   </data>

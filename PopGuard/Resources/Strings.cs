@@ -30,6 +30,8 @@ internal static class Strings
     public static string StatusNotSuppressing => Get(nameof(StatusNotSuppressing));
     public static string StatusUnlimited => Get(nameof(StatusUnlimited));
     public static string StatusFocus => Get(nameof(StatusFocus));
+    public static string StatusMic => Get(nameof(StatusMic));
+    public static string StatusAuto => Get(nameof(StatusAuto));
     public static string StatusRemaining(string remaining) => Fmt(nameof(StatusRemaining), remaining);
 
     // Balloon
