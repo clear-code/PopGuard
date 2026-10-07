@@ -82,6 +82,7 @@ Public Function BuildJson() As String
     s = s & BuildRules() & "," & vbCrLf
     s = s & BuildDurations() & "," & vbCrLf
     s = s & "  ""autoSuppressDuringFocus"": " & JBool(ParamBool("T_General", "AutoSuppressDuringFocus")) & "," & vbCrLf
+    s = s & "  ""autoSuppressDuringMicrophone"": " & JBool(ParamBool("T_General", "AutoSuppressDuringMicrophone")) & "," & vbCrLf
     s = s & "  ""language"": " & JStr(LanguageValue(ParamText("T_General", "Language"))) & vbCrLf
     s = s & "}" & vbCrLf
 

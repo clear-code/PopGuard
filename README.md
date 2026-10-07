@@ -74,7 +74,13 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 
 - **手動**：トレイメニューの時間候補（`durations`）→ `Activate(TimeSpan?)`（`null` は無制限）。
 - **フォーカス連動**：`Windows.UI.Shell.FocusSessionManager`（WinRT）の `IsFocusActiveChanged` を購読し、
-  フォーカス セッション中は自動抑止、終了で解除。手動操作が優先（自動で始めたものだけ自動解除）。
+  フォーカス セッション中は自動抑止、終了で解除（`FocusSessionWatcher`）。
+- **マイク連動**：`MicrophoneWatcher` が ConsentStore
+  （`…\CapabilityAccessManager\ConsentStore\microphone`、HKCU/HKLM、`NonPackaged` 配下のデスクトップアプリ含む）の
+  各アプリの `LastUsedTimeStart`/`LastUsedTimeStop` を約 2 秒間隔でポーリングし、`LastUsedTimeStop == 0`（使用中）が
+  あれば自動抑止、無くなれば解除。レジストリは**参照のみ**（変更しない）。
+- **複数の自動要因**：フォーカスとマイクは独立した要因として `GuardEngine` の `_autoSources` 集合で管理し、
+  いずれかが有効な間は抑止を継続、すべて解除されたときに自動解除。手動操作は常に優先（自動で始めたものだけ自動解除）。
 - **手動 DND は非対応**：`FocusSessionManager.IsFocusActive` はフォーカス セッションのみ反映し、手動の
   「応答不可」では変化しません。`SHQueryUserNotificationState`（`QUNS_QUIET_TIME`）も Win11 の新 DND を
   反映しないため、確実に取得できる公式手段がなく非対応としています（`NotificationStateWatcher` は検証用に残置）。
@@ -105,6 +111,7 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
     { "label": { "ja": "30分", "en": "30 min" }, "minutes": 30 }
   ],
   "autoSuppressDuringFocus": true,
+  "autoSuppressDuringMicrophone": true,
   "language": "auto"
 }
 ```
@@ -116,7 +123,8 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
   `{ "ja": "…", "en": "…" }` の言語別オブジェクトでもよい。表示言語に該当する言語だけが使われ、無い言語は
   `minutes` から自動生成される（片方だけ指定した場合、もう一方は自動生成）。`label` 自体を省略すると両言語とも
   自動生成。`durations` 省略時は既定候補（30分/1時間/2時間/一日/無制限、言語連動）。
-- `autoSuppressDuringFocus`：フォーカス連動（既定 true）。
+- `autoSuppressDuringFocus`：フォーカス セッション連動（既定 true）。
+- `autoSuppressDuringMicrophone`：マイク使用中（通話・Web 会議など）の連動（既定 true）。
 - `language`：`auto` / `ja` / `en`。
 
 生成支援として `tools/parameter-sheet/`（Excel パラメータシート）があります。
@@ -137,8 +145,8 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 - 書き込みのたびに開閉し、**10MB 超で世代ローテーション**（`PopGuard_1.log`〜`_10.log`）。
 - 複数インスタンス/スレッドに備え名前付き Mutex（`Local\PopGuard.Logger`）で直列化。
 - Debug ビルドでは `Debug.WriteLine` にも出力（`[Conditional("DEBUG")]`）。
-- 主なログ：`rules:` / `win-event:` / `focus-session:` / `guard: suppression …` /
-  `guard demote|restore|skip:` / `window toplevel:`。
+- 主なログ：`rules:` / `win-event:` / `focus-session:` / `mic-watch:` / `guardEngine: suppression …` /
+  `guardEngine: demote|restore|skip:` / `window toplevel:`。
 
 ---
 
