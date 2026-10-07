@@ -1,0 +1,12 @@
+{
+  "rules": [
+    { "enabled": true, "process": "*", "title": "", "class": "", "hide": "Bottom", "topMostOnly": true }
+  ],
+  "durations": [
+    { "label": { "ja": "1分", "en": "1 min" }, "minutes": 1 },
+    { "label": { "ja": "無制限", "en": "Unlimited" }, "minutes": 0 }
+  ],
+  "autoSuppressDuringFocus": false,
+  "autoSuppressDuringMicrophone": false,
+  "language": "ja"
+}
