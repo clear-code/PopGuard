@@ -111,7 +111,7 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
     { "label": { "ja": "30分", "en": "30 min" }, "minutes": 30 }
   ],
   "autoSuppressDuringFocus": true,
-  "autoSuppressDuringMicrophone": true,
+  "autoSuppressDuringMicrophone": false,
   "language": "auto"
 }
 ```
@@ -124,7 +124,7 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
   `minutes` から自動生成される（片方だけ指定した場合、もう一方は自動生成）。`label` 自体を省略すると両言語とも
   自動生成。`durations` 省略時は既定候補（30分/1時間/2時間/一日/無制限、言語連動）。
 - `autoSuppressDuringFocus`：フォーカス セッション連動（既定 true）。
-- `autoSuppressDuringMicrophone`：マイク使用中（通話・Web 会議など）の連動（既定 true）。
+- `autoSuppressDuringMicrophone`：マイク使用中（通話・Web 会議など）の連動（既定 false）。
 - `language`：`auto` / `ja` / `en`。
 
 生成支援として `tools/parameter-sheet/`（Excel パラメータシート）があります。

@@ -105,14 +105,14 @@ try {
     Assert-Equal -Label 'durations[0].minutes' -Expected 30 -Actual $config.durations[0].minutes
     Assert-Equal -Label 'durations[4] は無制限 (0 分)' -Expected 0 -Actual $config.durations[4].minutes
     Assert-Equal -Label 'autoSuppressDuringFocus の既定は true' -Expected $true -Actual $config.autoSuppressDuringFocus
-    Assert-Equal -Label 'autoSuppressDuringMicrophone の既定は true' -Expected $true -Actual $config.autoSuppressDuringMicrophone
+    Assert-Equal -Label 'autoSuppressDuringMicrophone の既定は false' -Expected $false -Actual $config.autoSuppressDuringMicrophone
     Assert-Equal -Label 'language の既定は auto' -Expected 'auto' -Actual $config.language
 
     Write-Host ''
     Write-Host '値を入れたときの出力'
 
     (Get-ParamCell $wb 'T_General' 'AutoSuppressDuringFocus').Value2 = '無効'
-    (Get-ParamCell $wb 'T_General' 'AutoSuppressDuringMicrophone').Value2 = '無効'
+    (Get-ParamCell $wb 'T_General' 'AutoSuppressDuringMicrophone').Value2 = '有効'
     (Get-ParamCell $wb 'T_General' 'Language').Value2 = '英語'
 
     $rules = Get-Table $wb 'A_Rules_Items'
@@ -132,7 +132,7 @@ try {
 
     $config = $json | ConvertFrom-Json
     Assert-Equal -Label 'autoSuppressDuringFocus' -Expected $false -Actual $config.autoSuppressDuringFocus
-    Assert-Equal -Label 'autoSuppressDuringMicrophone' -Expected $false -Actual $config.autoSuppressDuringMicrophone
+    Assert-Equal -Label 'autoSuppressDuringMicrophone' -Expected $true -Actual $config.autoSuppressDuringMicrophone
     Assert-Equal -Label 'language が内部値になる' -Expected 'en' -Actual $config.language
 
     Assert-Equal -Label 'rules の件数' -Expected 1 -Actual $config.rules.Count

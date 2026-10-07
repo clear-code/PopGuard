@@ -284,8 +284,8 @@ try {
     New-ParamTable -Sheet $ws -Row $row -Name 'T_General' -Params @(
         (New-Param -Label 'フォーカス セッション中は自動で抑止する' -Value '有効' -Name 'AutoSuppressDuringFocus' -Kind bool `
             -Note 'Windows 11 のフォーカス セッション中だけ自動で抑止します。手動の「応答不可」は対象外です'),
-        (New-Param -Label 'マイク使用中は自動で抑止する' -Value '有効' -Name 'AutoSuppressDuringMicrophone' -Kind bool `
-            -Note '通話や Web 会議などでマイクが使われている間だけ自動で抑止します'),
+        (New-Param -Label 'マイク使用中は自動で抑止する' -Value '無効' -Name 'AutoSuppressDuringMicrophone' -Kind bool `
+            -Note '通話や Web 会議などでマイクが使われている間だけ自動で抑止します（既定は無効）'),
         (New-Param -Label '表示言語' -Value '自動' -Name 'Language' -Kind choice -Choices @('自動', '日本語', '英語') `
             -Note '「自動」は OS の表示言語に従います (日本語以外は英語)')
     ) | Out-Null

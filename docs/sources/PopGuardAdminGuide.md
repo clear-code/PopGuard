@@ -98,7 +98,7 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
     { "label": { "ja": "無制限", "en": "Unlimited" }, "minutes": 0 }
   ],
   "autoSuppressDuringFocus": true,
-  "autoSuppressDuringMicrophone": true,
+  "autoSuppressDuringMicrophone": false,
   "language": "auto"
 }
 ```
@@ -156,7 +156,7 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 
 ## autoSuppressDuringMicrophone
 
-`true`（既定）で、マイクが使用中の間（通話・Web 会議など）に自動で抑止します。
+`true` で、マイクが使用中の間（通話・Web 会議など）に自動で抑止します（**既定は `false`**）。
 マイクの使用が終わると自動的に解除します。PopGuard 側で手動抑止している場合は、そちらが優先されます
 （手動で開始した抑止は、マイク使用の終了では解除されません）。
 

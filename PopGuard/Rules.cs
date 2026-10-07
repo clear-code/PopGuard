@@ -333,7 +333,7 @@ internal static class RulesStore
         {
             TryWriteSample();
             Logger.Line("rules: file not found, wrote a sample. Nothing will be suppressed. path=" + FilePath);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, true);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false);
         }
 
         RuleFile? file;
@@ -344,7 +344,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: failed to read JSON (nothing will be suppressed): " + ex.Message);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, true);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false);
         }
 
         var rules = new List<TargetRule>();
@@ -375,7 +375,7 @@ internal static class RulesStore
 
         IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
         bool autoFocus = file?.AutoSuppressDuringFocus ?? true;
-        bool autoMic = file?.AutoSuppressDuringMicrophone ?? true;
+        bool autoMic = file?.AutoSuppressDuringMicrophone ?? false;
 
         Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} micSync={autoMic} path={FilePath}");
         return new AppConfig(rules, durations, autoFocus, autoMic);
@@ -470,8 +470,8 @@ internal static class RulesStore
                 },
                 // Auto-suppress during a Windows 11 focus session (manual Do Not Disturb is not covered).
                 AutoSuppressDuringFocus = true,
-                // Auto-suppress while the microphone is in use (e.g. during a call/meeting).
-                AutoSuppressDuringMicrophone = true,
+                // Auto-suppress while the microphone is in use (e.g. during a call/meeting). Default off.
+                AutoSuppressDuringMicrophone = false,
                 // Display language: "auto" (follow the OS UI language) / "ja" / "en".
                 Language = "auto",
             };
