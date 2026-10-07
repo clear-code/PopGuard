@@ -81,6 +81,15 @@ public class TargetRuleTests
     }
 
     [Fact]
+    public void TryCreate_KeepsExcludeFlag()
+    {
+        var excl = TargetRule.TryCreate(new RuleEntry { Process = "app", Exclude = true }, out _)!;
+        var normal = TargetRule.TryCreate(new RuleEntry { Process = "app" }, out _)!;
+        Assert.True(excl.Exclude);
+        Assert.False(normal.Exclude); // default is a normal (suppress) rule
+    }
+
+    [Fact]
     public void TryCreate_KeepsTopMostOnlyFlag()
     {
         var on = TargetRule.TryCreate(new RuleEntry { Process = "app", TopMostOnly = true }, out _)!;

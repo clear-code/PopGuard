@@ -87,6 +87,7 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 ```json
 {
   "rules": [
+    { "enabled": true, "process": "SomeNotifier", "title": "*重要*", "exclude": true },
     { "enabled": true, "process": "SomeNotifier", "title": "*通知*",
       "class": "", "hide": "Bottom", "topMostOnly": true }
   ],
@@ -116,14 +117,20 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 | `title` | 文字列 | ウィンドウタイトルのワイルドカード。空なら絞らない |
 | `class` | 文字列 | ウィンドウクラス名のワイルドカード。空なら絞らない |
 | `hide` | 文字列 | `Bottom` / `Minimize` / `Hide`（省略時は `Bottom`） |
+| `exclude` | 真偽 | `true` で「**どんなときも抑止しない**」除外ルール（省略時は通常の抑止ルール） |
 | `topMostOnly` | 真偽 | **現状未実装**。常に TOPMOST のみが対象（将来用の設定） |
 
 * ワイルドカードは `*`（任意の 0 文字以上）と `?`（任意の 1 文字）が使用可能です。
-* `process` が空、または `*` / `?` だけのルールは「何にでも一致してしまう」ため無効として読み飛ばされます。
-* 複数のルールは上から順に評価し、最初に一致したものを適用します。
-* `hide` の値の意味: `Bottom`＝背面へ送る（既定）、`Minimize`＝最小化、`Hide`＝非表示。
+* `process` が空のルールは設定ミスとみなし無効として読み飛ばされます。
+  `*`（ワイルドカードのみ）は「全プロセスに一致」を意味し、有効です。
+* 複数のルールは上から順に評価し、**最初に一致したもの**を適用します。
+* `exclude: true` のルールに一致したウィンドウは抑止しません。**除外ルールは広いルールより上に置いてください**。
+  例: 先頭で特定タイトルを `exclude`、その下で `process: "*"` にして「それ以外はすべて抑止」。
+* `hide` の値の意味: `Bottom`＝背面へ送る（既定）、`Minimize`＝最小化、`Hide`＝非表示（`exclude` のときは無視）。
 * 対象になるのは最前面のウィンドウだけです。モーダルダイアログ（応答するまで操作をブロックするもの）は、
   安全のため対象外です。
+* タスクバーやデスクトップなど **Windows シェルのウィンドウは常に対象外**です。`process` に `*` を指定しても
+  これらは抑止されません（タスクバーが消えることはありません）。
 
 ## durations（抑止時間の候補）
 
@@ -216,6 +223,8 @@ PopGuardは動作記録を次のファイルに出力します（ユーザーご
 | `guardEngine: demote: process=… title=… …` | ウィンドウを裏へ送った |
 | `guardEngine: restore: process=… title=…` | ウィンドウを元へ戻した |
 | `guardEngine: skip: … (likely dialog: …)` | ダイアログとみなして対象外にした |
+| `guardEngine: skip: … (excluded by rule)` | 除外ルール（`exclude`）に一致して対象外にした |
+| `guardEngine: skip: … (system shell window)` | タスクバー等のシェルウィンドウとして対象外にした |
 | `window toplevel: process=… title=…` | 新しく出現したウィンドウ（ルール作成時の確認に利用可） |
 
 \newpage

@@ -61,6 +61,13 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 - `WS_EX_DLGMODALFRAME` を持つ。
 - ウィンドウクラスが `#32770`（標準の Win32 ダイアログボックス。`MessageBox` / `DialogBox` 由来）。
 
+### システムウィンドウ除外
+
+タスクバーなども TOPMOST のため、広いルール（例 `process: "*"`）でも巻き込まれないよう、
+Windows シェルのウィンドウクラスを**常に対象外**にします。
+対象クラス：`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`（タスクバー）、`Progman` / `WorkerW`（デスクトップ）、
+`NotifyIconOverflowWindow`（通知領域のあふれ）。`GuardEngine.IsSystemShellWindow` で判定。
+
 ### 復元
 
 裏へ送ったウィンドウ（`WasTopMost` / `hide` 方法を記録）を追跡し、次のタイミングで `RestoreAll()` により
@@ -117,8 +124,10 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 ```
 
 - `rules[]`：`process`（必須・ワイルドカード）、`title`/`class`（空で無指定）、`hide`（`Bottom`/`Minimize`/`Hide`）、
-  `enabled`、`topMostOnly`（**現状未実装**。常に TOPMOST のみ対象）。
+  `enabled`、`exclude`、`topMostOnly`（**現状未実装**。常に TOPMOST のみ対象）。
   - ワイルドカードは `*` `?`、全体一致・大文字小文字無視。`process` が空／ワイルドカードのみは無効。
+  - `exclude: true` は「**どんなときも抑止しない**」除外ルール。最初に一致したルールが適用されるため、
+    除外ルールを広いルール（例 `process: "*"`）より**上**に置くと例外を作れる。
 - `durations[]`：`minutes`（0 以下＝無制限）と `label`。`label` は文字列（全言語共通）でも、
   `{ "ja": "…", "en": "…" }` の言語別オブジェクトでもよい。表示言語に該当する言語だけが使われ、無い言語は
   `minutes` から自動生成される（片方だけ指定した場合、もう一方は自動生成）。`label` 自体を省略すると両言語とも

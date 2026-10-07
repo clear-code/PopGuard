@@ -114,6 +114,7 @@ Private Function BuildRules() As String
         body = body & "      ""title"": " & JStr(CellText(lo, CLng(r), 3)) & "," & vbCrLf
         body = body & "      ""class"": " & JStr(CellText(lo, CLng(r), 4)) & "," & vbCrLf
         body = body & "      ""hide"": " & JStr(HideValue(CellText(lo, CLng(r), 5))) & "," & vbCrLf
+        body = body & "      ""exclude"": " & JBool(CellBoolDefault(lo, CLng(r), 7, False)) & "," & vbCrLf
         body = body & "      ""topMostOnly"": " & JBool(CellBoolDefault(lo, CLng(r), 6, True)) & vbCrLf
         body = body & "    }"
     Next r

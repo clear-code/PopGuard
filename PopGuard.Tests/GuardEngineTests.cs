@@ -100,4 +100,21 @@ public class GuardEngineTests
         e.CheckExpiry();
         Assert.True(e.IsActive);
     }
+
+    [Theory]
+    [InlineData("Shell_TrayWnd")]          // primary taskbar
+    [InlineData("shell_traywnd")]          // case-insensitive
+    [InlineData("Shell_SecondaryTrayWnd")] // taskbar on other monitors
+    [InlineData("Progman")]                // desktop
+    [InlineData("WorkerW")]                // desktop wallpaper host
+    [InlineData("NotifyIconOverflowWindow")]
+    public void IsSystemShellWindow_ExcludesShellWindows(string className)
+        => Assert.True(GuardEngine.IsSystemShellWindow(className));
+
+    [Theory]
+    [InlineData("ToastTester Toast")]
+    [InlineData("#32770")]
+    [InlineData("")]
+    public void IsSystemShellWindow_AllowsOtherWindows(string className)
+        => Assert.False(GuardEngine.IsSystemShellWindow(className));
 }

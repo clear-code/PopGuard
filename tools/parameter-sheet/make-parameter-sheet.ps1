@@ -304,18 +304,21 @@ try {
     )
 
     $rulesTable = New-Table -Sheet $ws -Row $row -Column 1 -Name 'A_Rules_Items' `
-        -Headers @('有効', 'プロセス', 'タイトル', 'クラス', '隠し方', 'TOPMOSTのみ') -RowCount 20
+        -Headers @('有効', 'プロセス', 'タイトル', 'クラス', '隠し方', 'TOPMOSTのみ', '抑止しない') -RowCount 20
     $rulesTable.DataBodyRange.NumberFormatLocal = '@'
     $rulesTable.DataBodyRange.VerticalAlignment = -4160  # xlTop
 
     Add-ListValidation -Range $rulesTable.ListColumns('有効').DataBodyRange -Choices @('有効', '無効')
     Add-ListValidation -Range $rulesTable.ListColumns('隠し方').DataBodyRange -Choices @('背面へ送る', '最小化', '非表示')
     Add-ListValidation -Range $rulesTable.ListColumns('TOPMOSTのみ').DataBodyRange -Choices @('有効', '無効')
+    Add-ListValidation -Range $rulesTable.ListColumns('抑止しない').DataBodyRange -Choices @('有効', '無効')
 
     $noteRow = $row + 22
     foreach ($line in @(
         '・「有効」を空欄にすると有効 (true) として扱います。',
         '・「隠し方」: 背面へ送る = Bottom / 最小化 = Minimize / 非表示 = Hide。空欄は「背面へ送る」。',
+        '・「抑止しない」を「有効」にすると、その行に一致したウィンドウは常に抑止しません (除外ルール)。',
+        '　 ルールは上の行から順に評価されるため、除外ルールは広いルールより上の行に書いてください。',
         '・「TOPMOSTのみ」は現状の実装では常に TOPMOST のみが対象です (将来用の設定)。')) {
         $ws.Cells($noteRow, 1).Value2 = $line
         $ws.Cells($noteRow, 1).Font.Color = $COLOR_MUTED
@@ -328,6 +331,7 @@ try {
     $ws.Columns(4).ColumnWidth = 24
     $ws.Columns(5).ColumnWidth = 14
     $ws.Columns(6).ColumnWidth = 14
+    $ws.Columns(7).ColumnWidth = 12
 
     # ------------------------------------------------------------ 抑止時間
     $ws = $wb.Worksheets.Item('抑止時間 (Durations)')

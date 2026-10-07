@@ -143,6 +143,7 @@ try {
         -Condition ($json -match [regex]::Escape('Save C:\\tmp\\x \"y\"'))
     Assert-Equal -Label 'rules[0].hide が内部値になる' -Expected 'Minimize' -Actual $config.rules[0].hide
     Assert-Equal -Label 'rules[0].topMostOnly は空欄で true' -Expected $true -Actual $config.rules[0].topMostOnly
+    Assert-Equal -Label 'rules[0].exclude は空欄で false' -Expected $false -Actual $config.rules[0].exclude
 
     Assert-Equal -Label 'durations の件数 (既定 5 + 追加 1)' -Expected 6 -Actual $config.durations.Count
     Assert-Equal -Label '追加した durations の label.ja' -Expected '90分' -Actual $config.durations[5].label.ja

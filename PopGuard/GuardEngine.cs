@@ -54,6 +54,24 @@ internal sealed class GuardEngine
     // HWNDs skipped as modal (recorded so we don't log the same one every tick). Guarded by _lock.
     private readonly HashSet<IntPtr> _skippedModal = new();
 
+    // HWNDs skipped as a Windows shell window (recorded so we don't log the same one every tick). Guarded by _lock.
+    private readonly HashSet<IntPtr> _skippedSystem = new();
+
+    // HWNDs skipped by an exclusion rule (recorded so we don't log the same one every tick). Guarded by _lock.
+    private readonly HashSet<IntPtr> _skippedExcluded = new();
+
+    // Window classes owned by the Windows shell that must never be touched. The taskbar and desktop
+    // are TOPMOST, so a broad rule (e.g. process "*") would otherwise demote/hide them — on Windows 10
+    // this makes the taskbar disappear. Matching is case-insensitive.
+    private static readonly HashSet<string> SystemWindowClasses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Shell_TrayWnd",            // primary taskbar
+        "Shell_SecondaryTrayWnd",   // taskbar on secondary monitors
+        "Progman",                  // desktop (Program Manager)
+        "WorkerW",                  // desktop wallpaper host
+        "NotifyIconOverflowWindow", // notification-area overflow flyout
+    };
+
     // Suppression expiry (UTC). null means not suppressing. Touched by both the tray (UI thread)
     // and the poller (timer thread), so it is guarded by _stateLock.
     private readonly object _stateLock = new();
@@ -275,9 +293,49 @@ internal sealed class GuardEngine
         string className = ClassName(hwnd);
         string title = Title(hwnd);
 
+        // Never touch the Windows shell's own windows (taskbar, desktop, tray overflow), even when a
+        // broad rule matches. Demoting/hiding the taskbar would make it vanish (seen on Windows 10).
+        if (IsSystemShellWindow(className))
+        {
+            bool firstSeen;
+            lock (_lock)
+            {
+                firstSeen = _skippedSystem.Add(hwnd);
+                if (_skippedSystem.Count > 256)
+                {
+                    _skippedSystem.Clear();
+                }
+            }
+            if (firstSeen)
+            {
+                Logger.Line($"guardEngine: skip: process={process} class={className} (system shell window)");
+            }
+            return;
+        }
+
         TargetRule? rule = FindRule(process, className, title);
         if (rule is null)
         {
+            return;
+        }
+
+        // Exclusion rule ("never suppress"). The first matching rule wins, so an exclude rule placed
+        // above broader rules carves out exceptions.
+        if (rule.Exclude)
+        {
+            bool firstSeen;
+            lock (_lock)
+            {
+                firstSeen = _skippedExcluded.Add(hwnd);
+                if (_skippedExcluded.Count > 256)
+                {
+                    _skippedExcluded.Clear();
+                }
+            }
+            if (firstSeen)
+            {
+                Logger.Line($"guardEngine: skip: process={process} title={title} (excluded by rule)");
+            }
             return;
         }
 
@@ -383,11 +441,17 @@ internal sealed class GuardEngine
 
             _tracked.Clear();
             _skippedModal.Clear();
+            _skippedSystem.Clear();
+            _skippedExcluded.Clear();
         }
     }
 
     private static bool IsTopMost(IntPtr hwnd)
         => (GetWindowLong(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+
+    /// <summary>Whether the window class is a Windows shell window that must never be touched (taskbar, desktop, …).</summary>
+    internal static bool IsSystemShellWindow(string className)
+        => SystemWindowClasses.Contains(className ?? string.Empty);
 
     /// <summary>
     /// Decide whether a window is likely a modal/dialog, using several signals (behavior, style, class).

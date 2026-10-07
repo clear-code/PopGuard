@@ -183,6 +183,11 @@ internal sealed class RuleEntry
     public string? Class { get; set; }
     public string? Hide { get; set; }
 
+    // When true, windows matching this rule are NEVER suppressed ("allow"/exclusion rule).
+    // Because the first matching rule wins, place an exclude rule above broader rules to carve out
+    // exceptions (e.g. exclude a specific title, then suppress everything else with process "*").
+    public bool Exclude { get; set; }
+
     // Whether to target only topmost (TOPMOST) windows.
     // [Currently not implemented] accepted as config, but internally always TOPMOST-only.
     // Kept to leave room for implementing false (also target non-TOPMOST) later.
@@ -202,18 +207,22 @@ internal sealed class TargetRule
 
     public HideMethod Hide { get; }
 
+    /// <summary>When true this is an exclusion rule: matching windows are never suppressed.</summary>
+    public bool Exclude { get; }
+
     /// <summary>
     /// Whether to target only TOPMOST windows. [Currently unused by PopGuard.]
     /// Parsed so the config is preserved, but not used in matching (always TOPMOST-only).
     /// </summary>
     public bool TopMostOnly { get; }
 
-    private TargetRule(Regex? process, Regex? title, Regex? className, HideMethod hide, bool topMostOnly)
+    private TargetRule(Regex? process, Regex? title, Regex? className, HideMethod hide, bool exclude, bool topMostOnly)
     {
         _process = process;
         _title = title;
         _class = className;
         Hide = hide;
+        Exclude = exclude;
         TopMostOnly = topMostOnly;
     }
 
@@ -249,7 +258,7 @@ internal sealed class TargetRule
         Regex? className = Wildcard.Compile(e.Class);
         HideMethod hide = ParseHide(e.Hide);
 
-        return new TargetRule(process, title, className, hide, e.TopMostOnly);
+        return new TargetRule(process, title, className, hide, e.Exclude, e.TopMostOnly);
     }
 
     private static HideMethod ParseHide(string? s)
@@ -446,6 +455,15 @@ internal static class RulesStore
             {
                 Rules = new List<RuleEntry>
                 {
+                    // Exclusion example: never suppress a window with this title, even if a later rule
+                    // would match it. Place exclude rules ABOVE broader rules (first match wins).
+                    new()
+                    {
+                        Enabled = false,
+                        Process = "SomeNotifier",
+                        Title = "*Important*",
+                        Exclude = true,
+                    },
                     new()
                     {
                         Enabled = false,
