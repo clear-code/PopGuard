@@ -102,7 +102,7 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
       "class": "", "hide": "Bottom", "topMostOnly": true }
   ],
   "durations": [
-    { "label": "30分", "minutes": 30 }
+    { "label": { "ja": "30分", "en": "30 min" }, "minutes": 30 }
   ],
   "autoSuppressDuringFocus": true,
   "language": "auto"
@@ -112,7 +112,10 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 - `rules[]`：`process`（必須・ワイルドカード）、`title`/`class`（空で無指定）、`hide`（`Bottom`/`Minimize`/`Hide`）、
   `enabled`、`topMostOnly`（**現状未実装**。常に TOPMOST のみ対象）。
   - ワイルドカードは `*` `?`、全体一致・大文字小文字無視。`process` が空／ワイルドカードのみは無効。
-- `durations[]`：`label` と `minutes`（0 以下＝無制限）。省略時は既定候補（30分/1時間/2時間/一日/無制限）。
+- `durations[]`：`minutes`（0 以下＝無制限）と `label`。`label` は文字列（全言語共通）でも、
+  `{ "ja": "…", "en": "…" }` の言語別オブジェクトでもよい。表示言語に該当する言語だけが使われ、無い言語は
+  `minutes` から自動生成される（片方だけ指定した場合、もう一方は自動生成）。`label` 自体を省略すると両言語とも
+  自動生成。`durations` 省略時は既定候補（30分/1時間/2時間/一日/無制限、言語連動）。
 - `autoSuppressDuringFocus`：フォーカス連動（既定 true）。
 - `language`：`auto` / `ja` / `en`。
 

@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PopGuard.Resources;
 
@@ -27,8 +29,115 @@ internal sealed class RuleFile
 /// <summary>One suppression-duration option (JSON). minutes &lt;= 0 means unlimited.</summary>
 internal sealed class DurationEntry
 {
-    public string? Label { get; set; }
+    // Menu label. May be a plain string (common to all languages) or a language-keyed object
+    // like { "ja": "...", "en": "..." }. Omit to auto-generate a localized label from the minutes.
+    public LocalizedText? Label { get; set; }
+
     public int Minutes { get; set; }
+}
+
+/// <summary>
+/// A piece of UI text given either as a plain string (common to every language) or as a
+/// language-keyed object, e.g. <c>{ "ja": "2時間", "en": "2 hours" }</c>.
+/// </summary>
+[JsonConverter(typeof(LocalizedTextConverter))]
+internal sealed class LocalizedText
+{
+    // Per-language text, keyed by two-letter language code (case-insensitive). Null when a common
+    // string was given instead.
+    private readonly Dictionary<string, string>? _byLang;
+    private readonly string? _common;
+
+    public LocalizedText(string common) => _common = common;
+
+    public LocalizedText(Dictionary<string, string> byLang) => _byLang = byLang;
+
+    /// <summary>Build a Japanese/English pair (used for the sample config).</summary>
+    public static LocalizedText Of(string ja, string en) =>
+        new(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["ja"] = ja, ["en"] = en });
+
+    /// <summary>
+    /// Resolve the text for the current display language. Returns null when nothing applies,
+    /// so the caller can fall back (e.g. auto-generate from the minutes).
+    /// A language-keyed object only yields text for the language actually present: if just one
+    /// language was given, the others get null (and auto-generate) rather than borrowing it.
+    /// A plain string is common to every language.
+    /// </summary>
+    public string? Resolve(bool japanese)
+    {
+        if (_byLang is { Count: > 0 })
+        {
+            return _byLang.TryGetValue(japanese ? "ja" : "en", out string? v) && !string.IsNullOrWhiteSpace(v)
+                ? v.Trim()
+                : null;
+        }
+        return string.IsNullOrWhiteSpace(_common) ? null : _common!.Trim();
+    }
+
+    /// <summary>Serialize back (only needed because the sample config is written out).</summary>
+    internal void WriteTo(Utf8JsonWriter writer)
+    {
+        if (_byLang is { Count: > 0 })
+        {
+            writer.WriteStartObject();
+            foreach (KeyValuePair<string, string> kv in _byLang)
+            {
+                writer.WriteString(kv.Key, kv.Value);
+            }
+            writer.WriteEndObject();
+        }
+        else
+        {
+            writer.WriteStringValue(_common ?? string.Empty);
+        }
+    }
+}
+
+/// <summary>Reads a <see cref="LocalizedText"/> from either a JSON string or a language-keyed object.</summary>
+internal sealed class LocalizedTextConverter : JsonConverter<LocalizedText>
+{
+    public override LocalizedText? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.Null:
+                return null;
+
+            case JsonTokenType.String:
+                return new LocalizedText(reader.GetString() ?? string.Empty);
+
+            case JsonTokenType.StartObject:
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.EndObject)
+                    {
+                        return new LocalizedText(map);
+                    }
+                    if (reader.TokenType != JsonTokenType.PropertyName)
+                    {
+                        throw new JsonException("Unexpected token in localized label object.");
+                    }
+                    string key = reader.GetString() ?? string.Empty;
+                    reader.Read();
+                    if (reader.TokenType == JsonTokenType.String)
+                    {
+                        map[key] = reader.GetString() ?? string.Empty;
+                    }
+                    else
+                    {
+                        reader.Skip(); // ignore non-string values defensively
+                    }
+                }
+                throw new JsonException("Unterminated localized label object.");
+
+            default:
+                throw new JsonException($"Unexpected token for label: {reader.TokenType}.");
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, LocalizedText value, JsonSerializerOptions options)
+        => value.WriteTo(writer);
 }
 
 /// <summary>A compiled suppression-duration option. A null <see cref="Duration"/> means unlimited.</summary>
@@ -284,10 +393,22 @@ internal static class RulesStore
         foreach (DurationEntry e in entries)
         {
             TimeSpan? duration = e.Minutes > 0 ? TimeSpan.FromMinutes(e.Minutes) : null; // <= 0 = unlimited
-            string label = string.IsNullOrWhiteSpace(e.Label) ? AutoLabel(e.Minutes) : e.Label.Trim();
-            list.Add(new DurationOption(label, duration));
+            list.Add(new DurationOption(ResolveDurationLabel(e), duration));
         }
         return list;
+    }
+
+    /// <summary>
+    /// Pick a duration label for the current display language: the language-specific text from
+    /// <see cref="DurationEntry.Label"/> if present, otherwise an auto-generated (localized) label
+    /// from the minutes.
+    /// </summary>
+    internal static string ResolveDurationLabel(DurationEntry e)
+    {
+        bool japanese = (Strings.Culture ?? CultureInfo.CurrentUICulture)
+            .TwoLetterISOLanguageName.Equals("ja", StringComparison.OrdinalIgnoreCase);
+
+        return e.Label?.Resolve(japanese) is { Length: > 0 } label ? label : AutoLabel(e.Minutes);
     }
 
     /// <summary>Default options: 30 min / 1 hour / 2 hours / 1 day / unlimited (labels are localized).</summary>
@@ -336,14 +457,16 @@ internal static class RulesStore
                     },
                 },
                 // Suppression-duration options for the tray menu (minutes <= 0 means unlimited).
-                // Omitting durations entirely falls back to the same defaults.
+                // label may be a plain string or a { "ja": ..., "en": ... } object; omit both to
+                // auto-generate a localized label from the minutes. Omitting durations entirely
+                // falls back to the same defaults.
                 Durations = new List<DurationEntry>
                 {
-                    new() { Label = "30分", Minutes = 30 },
-                    new() { Label = "1時間", Minutes = 60 },
-                    new() { Label = "2時間", Minutes = 120 },
-                    new() { Label = "一日", Minutes = 1440 },
-                    new() { Label = "無制限", Minutes = 0 },
+                    new() { Label = LocalizedText.Of("30分", "30 min"), Minutes = 30 },
+                    new() { Label = LocalizedText.Of("1時間", "1 hour"), Minutes = 60 },
+                    new() { Label = LocalizedText.Of("2時間", "2 hours"), Minutes = 120 },
+                    new() { Label = LocalizedText.Of("一日", "1 day"), Minutes = 1440 },
+                    new() { Label = LocalizedText.Of("無制限", "Unlimited"), Minutes = 0 },
                 },
                 // Auto-suppress during a Windows 11 focus session (manual Do Not Disturb is not covered).
                 AutoSuppressDuringFocus = true,

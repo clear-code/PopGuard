@@ -139,11 +139,34 @@ Private Function BuildDurations() As String
     For Each r In targetRows
         If Not isFirst Then body = body & "," & vbCrLf
         isFirst = False
-        body = body & "    { ""label"": " & JStr(CellText(lo, CLng(r), 1)) & _
-               ", ""minutes"": " & JNum(CellLong(lo, CLng(r), 2)) & " }"
+        body = body & "    { " & DurationLabelJson(lo, CLng(r)) & _
+               """minutes"": " & JNum(CellLong(lo, CLng(r), 3)) & " }"
     Next r
 
     BuildDurations = "  ""durations"": [" & vbCrLf & body & vbCrLf & "  ]"
+End Function
+
+
+' ラベル列 (1=日本語, 2=英語) から label を組み立てる。
+' 両方空欄なら label を出力しない (アプリ側で「分」から自動生成)。
+' 片方だけなら、その言語キーだけのオブジェクトにする (入力した言語のみに適用)。
+Private Function DurationLabelJson(ByVal lo As ListObject, ByVal r As Long) As String
+    Dim ja As String, en As String, parts As String
+    ja = CellText(lo, r, 1)
+    en = CellText(lo, r, 2)
+
+    If ja = "" And en = "" Then
+        DurationLabelJson = ""
+        Exit Function
+    End If
+
+    If ja <> "" Then parts = """ja"": " & JStr(ja)
+    If en <> "" Then
+        If parts <> "" Then parts = parts & ", "
+        parts = parts & """en"": " & JStr(en)
+    End If
+
+    DurationLabelJson = """label"": { " & parts & " }, "
 End Function
 
 
@@ -184,11 +207,9 @@ Private Function CollectProblems() As Collection
     Set lo = GetTable("A_Durations_Items")
     Set targetRows = NonEmptyRows(lo, 0)
     For Each r In targetRows
-        If CellText(lo, CLng(r), 1) = "" Then
-            problems.Add "・抑止時間の候補: " & r & " 行目にラベルがありません。"
-        End If
+        ' ラベル (日本語 / 英語) はどちらも省略可。両方空欄なら「分」から自動生成される。
 
-        minutesValue = lo.DataBodyRange.Cells(CLng(r), 2).Value
+        minutesValue = lo.DataBodyRange.Cells(CLng(r), 3).Value
         If Trim$(CStr(minutesValue & "")) = "" Then
             problems.Add "・抑止時間の候補: " & r & " 行目の「分」が空欄です。0 以上の整数を入力してください。"
         ElseIf Not IsNumeric(minutesValue) Then

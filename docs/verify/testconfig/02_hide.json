@@ -3,8 +3,8 @@
     { "enabled": true, "process": "ToastTester", "title": "", "class": "", "hide": "Hide", "topMostOnly": true }
   ],
   "durations": [
-    { "label": "1分", "minutes": 1 },
-    { "label": "無制限", "minutes": 0 }
+    { "label": { "ja": "1分", "en": "1 min" }, "minutes": 1 },
+    { "label": { "ja": "無制限", "en": "Unlimited" }, "minutes": 0 }
   ],
   "autoSuppressDuringFocus": true,
   "language": "en"

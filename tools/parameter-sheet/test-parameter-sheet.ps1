@@ -100,7 +100,8 @@ try {
     Assert-True  -Label 'JSON として解釈できる' -Condition ($null -ne $config)
     Assert-Equal -Label '初期はルールが空' -Expected 0 -Actual $config.rules.Count
     Assert-Equal -Label '既定の抑止時間が 5 件' -Expected 5 -Actual $config.durations.Count
-    Assert-Equal -Label 'durations[0].label' -Expected '30分' -Actual $config.durations[0].label
+    Assert-Equal -Label 'durations[0].label.ja' -Expected '30分' -Actual $config.durations[0].label.ja
+    Assert-Equal -Label 'durations[0].label.en' -Expected '30 min' -Actual $config.durations[0].label.en
     Assert-Equal -Label 'durations[0].minutes' -Expected 30 -Actual $config.durations[0].minutes
     Assert-Equal -Label 'durations[4] は無制限 (0 分)' -Expected 0 -Actual $config.durations[4].minutes
     Assert-Equal -Label 'autoSuppressDuringFocus の既定は true' -Expected $true -Actual $config.autoSuppressDuringFocus
@@ -121,7 +122,8 @@ try {
 
     $durations = Get-Table $wb 'A_Durations_Items'
     $durations.DataBodyRange.Cells(6, 1).Value2 = '90分'
-    $durations.DataBodyRange.Cells(6, 2).Value2 = 90
+    $durations.DataBodyRange.Cells(6, 2).Value2 = '90 min'
+    $durations.DataBodyRange.Cells(6, 3).Value2 = 90
 
     $json = Invoke-Macro $xl 'BuildJson'
     Assert-Equal -Label '入力チェックを通る' -Expected '' -Actual (Invoke-Macro $xl 'ValidationMessage')
@@ -140,7 +142,8 @@ try {
     Assert-Equal -Label 'rules[0].topMostOnly は空欄で true' -Expected $true -Actual $config.rules[0].topMostOnly
 
     Assert-Equal -Label 'durations の件数 (既定 5 + 追加 1)' -Expected 6 -Actual $config.durations.Count
-    Assert-Equal -Label '追加した durations の label' -Expected '90分' -Actual $config.durations[5].label
+    Assert-Equal -Label '追加した durations の label.ja' -Expected '90分' -Actual $config.durations[5].label.ja
+    Assert-Equal -Label '追加した durations の label.en' -Expected '90 min' -Actual $config.durations[5].label.en
     Assert-Equal -Label '追加した durations の minutes' -Expected 90 -Actual $config.durations[5].minutes
 
     Write-Host ''
@@ -156,15 +159,16 @@ try {
         -Condition ((Invoke-Macro $xl 'ValidationMessage') -match 'プロセス名')
     $rules.DataBodyRange.Cells(2, 3).Value2 = ''
 
+    # ラベル (日本語) だけ入れて「分」(3 列目) を空欄 -> 「分」エラー
     $durations.DataBodyRange.Cells(7, 1).Value2 = '不正'
-    $durations.DataBodyRange.Cells(7, 2).Value2 = ''
+    $durations.DataBodyRange.Cells(7, 3).Value2 = ''
     Assert-True -Label '分が空欄なら止まる' `
         -Condition ((Invoke-Macro $xl 'ValidationMessage') -match '分')
-    $durations.DataBodyRange.Cells(7, 2).Value2 = -1
+    $durations.DataBodyRange.Cells(7, 3).Value2 = -1
     Assert-True -Label '分が負数なら止まる' `
         -Condition ((Invoke-Macro $xl 'ValidationMessage') -match '0 以上')
     $durations.DataBodyRange.Cells(7, 1).Value2 = ''
-    $durations.DataBodyRange.Cells(7, 2).Value2 = ''
+    $durations.DataBodyRange.Cells(7, 3).Value2 = ''
     Assert-Equal -Label '不正な行を消すと通る' -Expected '' -Actual (Invoke-Macro $xl 'ValidationMessage')
 
     $wb.Close($false)

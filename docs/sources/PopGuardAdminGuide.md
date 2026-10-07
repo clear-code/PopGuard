@@ -90,11 +90,11 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
       "class": "", "hide": "Bottom", "topMostOnly": true }
   ],
   "durations": [
-    { "label": "30分", "minutes": 30 },
-    { "label": "1時間", "minutes": 60 },
-    { "label": "2時間", "minutes": 120 },
-    { "label": "一日", "minutes": 1440 },
-    { "label": "無制限", "minutes": 0 }
+    { "label": { "ja": "30分", "en": "30 min" }, "minutes": 30 },
+    { "label": { "ja": "1時間", "en": "1 hour" }, "minutes": 60 },
+    { "label": { "ja": "2時間", "en": "2 hours" }, "minutes": 120 },
+    { "label": { "ja": "一日", "en": "1 day" }, "minutes": 1440 },
+    { "label": { "ja": "無制限", "en": "Unlimited" }, "minutes": 0 }
   ],
   "autoSuppressDuringFocus": true,
   "language": "auto"
@@ -129,10 +129,20 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 
 | キー | 型 | 説明 |
 | --- | --- | --- |
-| `label` | 文字列 | メニューに表示するラベル |
+| `label` | 文字列 または オブジェクト | メニューに表示するラベル（下記参照） |
 | `minutes` | 整数 | 分。**0 以下は「無制限」** |
 
-`durations` を省略、または空にした場合は、既定の候補（30分 / 1時間 / 2時間 / 一日 / 無制限）が使われます。
+`label` は次の 2 通りで指定できます。
+
+* **文字列**：全言語共通のラベル（例: `"label": "90分"`）。
+* **言語別オブジェクト**：表示言語ごとのラベル（例: `"label": { "ja": "2時間", "en": "2 hours" }`）。
+
+ラベルは**表示言語（`language`）に連動**します。該当する言語のラベルがあればそれを使い、無ければ `minutes` から
+自動生成します（自動生成も言語連動）。**片方の言語だけ指定した場合、もう一方はその言語に流用せず自動生成します。**
+`label` 自体を省略した場合も、両言語とも `minutes` から自動生成します。
+
+`durations` を省略、または空にした場合は、既定の候補（30分 / 1時間 / 2時間 / 一日 / 無制限）が使われます
+（既定の候補も表示言語に連動します）。
 
 ## autoSuppressDuringFocus
 

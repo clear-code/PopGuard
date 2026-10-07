@@ -331,31 +331,36 @@ try {
     $ws = $wb.Worksheets.Item('抑止時間 (Durations)')
     $row = Set-SheetHeading -Sheet $ws -Title '抑止時間 (Durations)' -Lines @(
         'トレイメニューの「ウィンドウを抑止する」に出す、時間の候補を記入します。',
+        'ラベルは表示言語に合わせて「日本語」「英語」を切り替えます。片方だけ書くと、その言語だけに使われ、',
+        'もう一方は「分」から自動生成します（両方空欄なら両言語とも自動生成）。',
         '「分」は 0 以上の整数で、0 は「無制限」を表します。',
         '1 行も書かなければ、PopGuard は既定の候補 (30分 / 1時間 / 2時間 / 一日 / 無制限) を使います。'
     )
 
     $durTable = New-Table -Sheet $ws -Row $row -Column 1 -Name 'A_Durations_Items' `
-        -Headers @('ラベル', '分') -RowCount 12
-    $durTable.ListColumns('ラベル').DataBodyRange.NumberFormatLocal = '@'
+        -Headers @('ラベル (日本語)', 'ラベル (英語)', '分') -RowCount 12
+    $durTable.ListColumns('ラベル (日本語)').DataBodyRange.NumberFormatLocal = '@'
+    $durTable.ListColumns('ラベル (英語)').DataBodyRange.NumberFormatLocal = '@'
     $durTable.ListColumns('分').DataBodyRange.NumberFormatLocal = '0'
     Add-WholeNumberValidation -Range $durTable.ListColumns('分').DataBodyRange
 
     $defaults = @(
-        @('30分', 30),
-        @('1時間', 60),
-        @('2時間', 120),
-        @('一日', 1440),
-        @('無制限', 0)
+        @('30分', '30 min', 30),
+        @('1時間', '1 hour', 60),
+        @('2時間', '2 hours', 120),
+        @('一日', '1 day', 1440),
+        @('無制限', 'Unlimited', 0)
     )
     for ($i = 0; $i -lt $defaults.Count; $i++) {
         $durTable.DataBodyRange.Cells($i + 1, 1).Value2 = $defaults[$i][0]
-        $durTable.DataBodyRange.Cells($i + 1, 2).Value2 = [int]$defaults[$i][1]
+        $durTable.DataBodyRange.Cells($i + 1, 2).Value2 = $defaults[$i][1]
+        $durTable.DataBodyRange.Cells($i + 1, 3).Value2 = [int]$defaults[$i][2]
     }
 
     $ws.Columns(1).ColumnWidth = 20
-    $ws.Columns(2).ColumnWidth = 10
-    $ws.Columns(3).ColumnWidth = 60
+    $ws.Columns(2).ColumnWidth = 20
+    $ws.Columns(3).ColumnWidth = 10
+    $ws.Columns(4).ColumnWidth = 60
 
     # ------------------------------------------------------------- 仕上げ
     foreach ($name in $sheetNames) {
