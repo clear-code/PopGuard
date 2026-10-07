@@ -36,7 +36,11 @@ internal sealed class TrayContext : ApplicationContext
 
     private bool? _lastActive; // starts null so the first update is always applied
 
-    public TrayContext(GuardEngine guard, IReadOnlyList<DurationOption> durations)
+    public TrayContext(
+        GuardEngine guard,
+        IReadOnlyList<DurationOption> durations,
+        SyncState focusSync,
+        SyncState micSync)
     {
         _guard = guard;
 
@@ -57,11 +61,27 @@ internal sealed class TrayContext : ApplicationContext
             suppress.DropDownItems.Add(new ToolStripMenuItem(opt.Label, null, (_, _) => Start(captured)));
         }
 
+        // Read-only display of the auto-suppress sources' effective state (includes OS/device support).
+        // Disabled on purpose: they show the current state but cannot be changed from the menu.
+        var focusSyncItem = new ToolStripMenuItem(SettingLine(Strings.SyncFocus, focusSync))
+        {
+            Enabled = false,
+            Checked = focusSync == SyncState.On,
+        };
+        var micSyncItem = new ToolStripMenuItem(SettingLine(Strings.SyncMic, micSync))
+        {
+            Enabled = false,
+            Checked = micSync == SyncState.On,
+        };
+
         var menu = new ContextMenuStrip();
         menu.Items.Add(_statusItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(suppress);
         menu.Items.Add(_stopItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(focusSyncItem);
+        menu.Items.Add(micSyncItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem(Strings.MenuExit, null, (_, _) => ExitApp()));
 
@@ -121,6 +141,14 @@ internal sealed class TrayContext : ApplicationContext
         _statusItem.Text = Strings.StatusPrefix + text;
         _notifyIcon.Text = active ? "PopGuard — " + text : "PopGuard";
     }
+
+    /// <summary>"&lt;name&gt;: Enabled/Disabled/Unavailable" line for the read-only state display.</summary>
+    private static string SettingLine(string name, SyncState state) => name + ": " + state switch
+    {
+        SyncState.On => Strings.StateEnabled,
+        SyncState.Unavailable => Strings.StateUnavailable,
+        _ => Strings.StateDisabled,
+    };
 
     /// <summary>Status label for auto-suppression, naming the condition that triggered it.</summary>
     private static string AutoStatusText(AutoSuppressReason reason) => reason switch

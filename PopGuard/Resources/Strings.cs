@@ -30,6 +30,13 @@ internal static class Strings
     public static string StatusNotSuppressing => Get(nameof(StatusNotSuppressing));
     public static string StatusUnlimited => Get(nameof(StatusUnlimited));
     public static string StatusFocus => Get(nameof(StatusFocus));
+
+    // Read-only setting display (focus / microphone auto-suppress)
+    public static string SyncFocus => Get(nameof(SyncFocus));
+    public static string SyncMic => Get(nameof(SyncMic));
+    public static string StateEnabled => Get(nameof(StateEnabled));
+    public static string StateDisabled => Get(nameof(StateDisabled));
+    public static string StateUnavailable => Get(nameof(StateUnavailable));
     public static string StatusMic => Get(nameof(StatusMic));
     public static string StatusAuto => Get(nameof(StatusAuto));
     public static string StatusRemaining(string remaining) => Fmt(nameof(StatusRemaining), remaining);

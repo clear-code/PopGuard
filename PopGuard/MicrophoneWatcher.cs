@@ -27,6 +27,10 @@ internal sealed class MicrophoneWatcher
     private System.Threading.Timer? _timer;
     private bool _lastInUse;
 
+    /// <summary>Effective state after <see cref="Start"/>, for display. Microphone detection works on
+    /// every supported OS, so this is simply On when enabled by config, otherwise Off.</summary>
+    public SyncState State { get; private set; } = SyncState.Off;
+
     public MicrophoneWatcher(GuardEngine guardEngine, bool enabled)
     {
         _guardEngine = guardEngine;
@@ -37,9 +41,12 @@ internal sealed class MicrophoneWatcher
     {
         if (!_enabled)
         {
+            State = SyncState.Off;
             Logger.Line("mic-watch: disabled by config (autoSuppressDuringMicrophone=false)");
             return;
         }
+
+        State = SyncState.On;
 
         // Reflect the current state once at startup, then poll for changes.
         _lastInUse = IsMicrophoneInUse();

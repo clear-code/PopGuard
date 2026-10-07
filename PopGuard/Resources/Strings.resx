@@ -35,6 +35,21 @@
   <data name="StatusFocus" xml:space="preserve">
     <value>Suppressing (focus)</value>
   </data>
+  <data name="SyncFocus" xml:space="preserve">
+    <value>Auto-suppress during focus</value>
+  </data>
+  <data name="SyncMic" xml:space="preserve">
+    <value>Auto-suppress during mic use</value>
+  </data>
+  <data name="StateEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="StateDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="StateUnavailable" xml:space="preserve">
+    <value>Unavailable on this PC</value>
+  </data>
   <data name="StatusMic" xml:space="preserve">
     <value>Suppressing (microphone in use)</value>
   </data>

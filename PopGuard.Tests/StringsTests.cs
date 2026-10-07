@@ -16,6 +16,9 @@ public class StringsTests : IDisposable
         Assert.Equal("Stop suppression", Strings.MenuStop);
         Assert.Equal("Not suppressing", Strings.StatusNotSuppressing);
         Assert.Equal("Unlimited", Strings.DurUnlimited);
+        Assert.Equal("Enabled", Strings.StateEnabled);
+        Assert.Equal("Disabled", Strings.StateDisabled);
+        Assert.Equal("Unavailable on this PC", Strings.StateUnavailable);
     }
 
     [Fact]
@@ -26,6 +29,9 @@ public class StringsTests : IDisposable
         Assert.Equal("抑止を停止", Strings.MenuStop);
         Assert.Equal("抑止していません", Strings.StatusNotSuppressing);
         Assert.Equal("無制限", Strings.DurUnlimited);
+        Assert.Equal("有効", Strings.StateEnabled);
+        Assert.Equal("無効", Strings.StateDisabled);
+        Assert.Equal("この PC では非対応", Strings.StateUnavailable);
     }
 
     [Fact]

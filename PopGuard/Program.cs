@@ -45,7 +45,9 @@ internal static class Program
 
             // Reside in the tray. Suppression is enabled manually (menu) and via focus-session sync.
             ApplicationConfiguration.Initialize();
-            Application.Run(new TrayContext(engine, config.Durations));
+            Application.Run(new TrayContext(
+                engine, config.Durations,
+                focus.State, mic.State));
 
             mic.Stop();
             eventWatcher.Stop();
