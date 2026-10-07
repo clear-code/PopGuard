@@ -1,7 +1,7 @@
 namespace ToastTester;
 
 /// <summary>
-/// 右下に出るトースト風のポップアップ。数秒で自動的に閉じる。
+/// 右下に出るトースト風のポップアップ。約 30 秒で自動的に閉じる。
 /// 実際のトースト（Thunderbird の通知など）に近づけるため、
 /// 最前面（TOPMOST）・非アクティブ化・ツールウィンドウ（タスクバー非表示）にしてある。
 /// これにより PopGuard の「TOPMOST の独立ウィンドウを裏へ送る」動作を試せる。
@@ -11,7 +11,7 @@ internal sealed class ToastForm : Form
     private const int ScreenMargin = 12;
     private const int StackGap = 8;
 
-    private readonly System.Windows.Forms.Timer _life = new() { Interval = 5000 };
+    private readonly System.Windows.Forms.Timer _life = new() { Interval = 30000 };
 
     // フォーカスを奪わずに表示する（実際のトーストと同じ挙動）。
     protected override bool ShowWithoutActivation => true;
