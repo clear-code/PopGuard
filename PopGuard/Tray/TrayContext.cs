@@ -20,7 +20,7 @@ internal sealed class TrayContext : ApplicationContext
     private static readonly Color ActiveDotColor = Color.FromArgb(46, 204, 113);
     private static readonly Color InactiveDotColor = Color.FromArgb(150, 150, 150);
 
-    private readonly GuardEngine _guard;
+    private readonly GuardEngine _guardEngine;
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _statusItem;
     private readonly ToolStripMenuItem _stopItem;
@@ -37,12 +37,12 @@ internal sealed class TrayContext : ApplicationContext
     private bool? _lastActive; // starts null so the first update is always applied
 
     public TrayContext(
-        GuardEngine guard,
+        GuardEngine guardEngine,
         IReadOnlyList<DurationOption> durations,
         SyncState focusSync,
         SyncState micSync)
     {
-        _guard = guard;
+        _guardEngine = guardEngine;
 
         _activeIcon = LoadIcon("tray_active.ico");
         _inactiveIcon = LoadIcon("tray_inactive.ico");
@@ -103,7 +103,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private void Start(DurationOption option)
     {
-        _guard.Activate(option.Duration);
+        _guardEngine.Activate(option.Duration);
         UpdateStatus();
         _notifyIcon.ShowBalloonTip(3000, "PopGuard",
             Strings.BalloonSuppress(option.Label), ToolTipIcon.Info);
@@ -111,13 +111,13 @@ internal sealed class TrayContext : ApplicationContext
 
     private void Stop()
     {
-        _guard.Deactivate("manual stop");
+        _guardEngine.Deactivate("manual stop");
         UpdateStatus();
     }
 
     private void UpdateStatus()
     {
-        DateTime? until = _guard.ActiveUntilUtc;
+        DateTime? until = _guardEngine.ActiveUntilUtc;
         bool active = until.HasValue;
 
         // Update color/image/icon/stop-button only when the state changes (avoid per-second assignment).
@@ -133,7 +133,7 @@ internal sealed class TrayContext : ApplicationContext
         // Text changes per second only during finite suppression. Re-assigning the same string is ignored by the setter.
         string text = until switch
         {
-            { } when _guard.IsAutoActive => AutoStatusText(_guard.AutoReason),
+            { } when _guardEngine.IsAutoActive => AutoStatusText(_guardEngine.AutoReason),
             { } u when u == DateTime.MaxValue => Strings.StatusUnlimited,
             { } u => Strings.StatusRemaining(Remaining(u)),
             _ => Strings.StatusNotSuppressing,
@@ -205,7 +205,7 @@ internal sealed class TrayContext : ApplicationContext
 
     private void ExitApp()
     {
-        _guard.Deactivate("exit");
+        _guardEngine.Deactivate("exit");
         ExitThread();
     }
 

@@ -11,17 +11,17 @@ internal sealed class TopLevelPoller
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(700);
 
     private readonly WindowReporter _reporter;
-    private readonly GuardEngine _guard;
+    private readonly GuardEngine _guardEngine;
     private readonly NotificationStateWatcher _notifState = new(); // diagnostic: DND/quiet-time logging
     private readonly HashSet<long> _known = new(); // only touched inside Tick, which never overlaps (see _running)
     // Referencing WinForms makes the name Timer ambiguous; be explicit about the thread-pool Timer.
     private System.Threading.Timer? _timer;
     private int _running; // 1 while a tick is in progress; prevents overlapping callbacks
 
-    public TopLevelPoller(WindowReporter reporter, GuardEngine guard)
+    public TopLevelPoller(WindowReporter reporter, GuardEngine guardEngine)
     {
         _reporter = reporter;
-        _guard = guard;
+        _guardEngine = guardEngine;
     }
 
     public void Start()
@@ -54,7 +54,7 @@ internal sealed class TopLevelPoller
         try
         {
             // Release/restore if the suppression expiry has passed.
-            _guard.CheckExpiry();
+            _guardEngine.CheckExpiry();
 
             // Diagnostic: log notification-state changes (to confirm DND -> QUNS_QUIET_TIME).
             _notifState.Poll();
@@ -68,7 +68,7 @@ internal sealed class TopLevelPoller
 
                 // Evaluate every top-level window each tick and keep pushing rule-matched ones back
                 // (so they stay down even if they re-assert topmost).
-                _guard.Consider(h);
+                _guardEngine.Consider(h);
 
                 // Report only newly appeared windows that are a meaningful size.
                 if (_known.Add(h.ToInt64()) && Win32Windows.IsReasonableSize(h))
