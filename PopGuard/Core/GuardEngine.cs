@@ -11,45 +11,20 @@ internal enum HideMethod
     Hide,     // Hide
 }
 
-/// <summary>An external condition that can auto-start suppression (and auto-release it when it ends).</summary>
-internal enum AutoSource
-{
-    Focus,      // A Windows 11 focus session is active
-    Microphone, // The microphone is in use (e.g. during a call/meeting)
-}
-
-/// <summary>Why suppression is currently auto-active. For tray display.</summary>
-internal enum AutoSuppressReason
-{
-    None,
-    Focus,
-    Microphone,
-    Multiple,
-}
-
 /// <summary>
-/// Pushes rule-matched windows to the back, tracks them, and always restores them on exit/failure.
-/// Whether TOPMOST is required can be configured per rule (TopMostOnly).
-///
-/// The only Win32 APIs called are SetWindowPos / ShowWindowAsync.
-/// It never kills processes or modifies files/registry.
+/// Decides which windows to suppress and drives the pieces that do it: it gates on the suppression
+/// state (<see cref="SuppressionState"/>), classifies each window (rule match, modal / shell / exclusion
+/// skips), and hands matched windows to <see cref="WindowSuppressor"/>. Suppression-state members are
+/// forwarded so callers keep a single entry point.
 /// </summary>
 internal sealed class GuardEngine
 {
-    private sealed class Tracked
-    {
-        public IntPtr Hwnd;
-        public bool WasTopMost;
-        public HideMethod Applied;
-        public string Process = string.Empty;
-        public string Title = string.Empty;
-    }
-
     private readonly IReadOnlyList<TargetRule> _rules;
     private readonly bool _excludeSystemWindows;
     private readonly int _ownPid = Process.GetCurrentProcess().Id;
-    private readonly object _lock = new();
-    private readonly Dictionary<IntPtr, Tracked> _tracked = new();
+
+    private readonly SuppressionState _state = new();
+    private readonly WindowSuppressor _suppressor = new();
 
     // "Skip" reasons each log a given window only once (not every tick). Each is independently synchronized.
     private readonly OncePerWindowLog _modalSkips = new();      // skipped as a modal/dialog
@@ -68,186 +43,47 @@ internal sealed class GuardEngine
         "NotifyIconOverflowWindow", // notification-area overflow flyout
     };
 
-    // Suppression expiry (UTC). null means not suppressing. Touched by both the tray (UI thread)
-    // and the poller (timer thread), so it is guarded by _stateLock.
-    private readonly object _stateLock = new();
-    private DateTime? _activeUntil;
-    private bool _autoActive; // whether the current activation was auto-started (by an AutoSource)
-
-    // Auto-suppress sources currently "on" (focus session, microphone, ...). This set mirrors the
-    // watchers' on/off events; suppression is auto-released only once every source is off. Guarded by _stateLock.
-    private readonly HashSet<AutoSource> _autoSources = new();
-
     public GuardEngine(IReadOnlyList<TargetRule> rules, bool excludeSystemWindows = true)
     {
         _rules = rules;
         _excludeSystemWindows = excludeSystemWindows;
+
+        // When suppression is released (manual stop, expiry, or the last auto-source turning off),
+        // restore the windows that were pushed back.
+        _state.Released += DoRestore;
     }
 
-    /// <summary>Whether suppression is currently active.</summary>
-    public bool IsActive
-    {
-        get
-        {
-            lock (_stateLock)
-            {
-                return _activeUntil is { } until && DateTime.UtcNow < until;
-            }
-        }
-    }
+    // --- Suppression state (forwarded to SuppressionState) ---
 
-    /// <summary>Suppression expiry (UTC), or null if inactive. For display.</summary>
-    public DateTime? ActiveUntilUtc
-    {
-        get
-        {
-            lock (_stateLock)
-            {
-                return _activeUntil;
-            }
-        }
-    }
-
-    /// <summary>Whether the current suppression was auto-activated (focus session / microphone). For display.</summary>
-    public bool IsAutoActive
-    {
-        get
-        {
-            lock (_stateLock)
-            {
-                return _autoActive && _activeUntil.HasValue;
-            }
-        }
-    }
-
-    /// <summary>Which auto-source(s) are driving the current auto-suppression. For display.</summary>
-    public AutoSuppressReason AutoReason
-    {
-        get
-        {
-            lock (_stateLock)
-            {
-                if (!_autoActive || !_activeUntil.HasValue || _autoSources.Count == 0)
-                {
-                    return AutoSuppressReason.None;
-                }
-                if (_autoSources.Count > 1)
-                {
-                    return AutoSuppressReason.Multiple;
-                }
-                return _autoSources.Contains(AutoSource.Microphone)
-                    ? AutoSuppressReason.Microphone
-                    : AutoSuppressReason.Focus;
-            }
-        }
-    }
+    public bool IsActive => _state.IsActive;
+    public DateTime? ActiveUntilUtc => _state.ActiveUntilUtc;
+    public bool IsAutoActive => _state.IsAutoActive;
+    public AutoSuppressReason AutoReason => _state.AutoReason;
 
     /// <summary>Activate suppression manually. A null <paramref name="duration"/> means unlimited.</summary>
-    public void Activate(TimeSpan? duration)
-    {
-        lock (_stateLock)
-        {
-            _activeUntil = duration is { } d ? DateTime.UtcNow + d : DateTime.MaxValue;
-            _autoActive = false; // manual action
-        }
-        Logger.Line(duration is { } dd
-            ? $"guardEngine: suppression started ({dd.TotalMinutes:0} min)"
-            : "guardEngine: suppression started (unlimited)");
-    }
+    public void Activate(TimeSpan? duration) => _state.Activate(duration);
 
     /// <summary>Stop suppression and restore the windows that were pushed back.</summary>
-    public void Deactivate(string reason)
-    {
-        bool wasActive;
-        lock (_stateLock)
-        {
-            wasActive = _activeUntil.HasValue;
-            _activeUntil = null;
-            _autoActive = false;
-        }
-        if (wasActive)
-        {
-            RestoreAll();
-            Logger.Line($"guardEngine: suppression ended ({reason})");
-        }
-    }
+    public void Deactivate(string reason) => _state.Deactivate(reason);
 
-    /// <summary>React to a Windows 11 focus session starting/ending. See <see cref="SetAutoSource"/>.</summary>
-    public void OnFocusChanged(bool focusActive) => SetAutoSource(AutoSource.Focus, focusActive, "focus");
+    /// <summary>React to a Windows 11 focus session starting/ending.</summary>
+    public void OnFocusChanged(bool focusActive) => _state.SetAutoSource(AutoSource.Focus, focusActive, "focus");
 
-    /// <summary>React to the microphone starting/stopping use (e.g. a call/meeting). See <see cref="SetAutoSource"/>.</summary>
-    public void OnMicrophoneChanged(bool micInUse) => SetAutoSource(AutoSource.Microphone, micInUse, "microphone");
-
-    /// <summary>
-    /// Toggle an auto-suppress source on/off. Auto-suppression starts when the first source turns on
-    /// (unless suppression is already active, e.g. manual) and is auto-released only once every
-    /// auto-started source is off. Manual suppression is always respected and never auto-released.
-    /// </summary>
-    private void SetAutoSource(AutoSource source, bool active, string name)
-    {
-        bool started = false;
-        bool ended = false;
-        lock (_stateLock)
-        {
-            if (active)
-            {
-                if (!_autoSources.Add(source))
-                {
-                    return; // already on; no change
-                }
-                // Auto-start only if nothing is suppressing yet (don't override manual suppression).
-                if (_activeUntil is null)
-                {
-                    _activeUntil = DateTime.MaxValue;
-                    _autoActive = true;
-                    started = true;
-                }
-            }
-            else
-            {
-                if (!_autoSources.Remove(source))
-                {
-                    return; // was not on; no change
-                }
-                // Release only what we auto-started, and only once every source is off.
-                if (_autoActive && _autoSources.Count == 0)
-                {
-                    _activeUntil = null;
-                    _autoActive = false;
-                    ended = true;
-                }
-            }
-        }
-
-        if (started)
-        {
-            Logger.Line($"guardEngine: suppression started (auto: {name})");
-        }
-        if (ended)
-        {
-            RestoreAll();
-            Logger.Line($"guardEngine: suppression ended (auto: {name} ended)");
-        }
-    }
+    /// <summary>React to the microphone starting/stopping use (e.g. a call/meeting).</summary>
+    public void OnMicrophoneChanged(bool micInUse) => _state.SetAutoSource(AutoSource.Microphone, micInUse, "microphone");
 
     /// <summary>Release suppression if the expiry has passed. Called from the poller every tick.</summary>
-    public void CheckExpiry()
+    public void CheckExpiry() => _state.CheckExpiry();
+
+    /// <summary>Restore all pushed-back windows. Safe to call on exit/failure.</summary>
+    public void RestoreAll() => DoRestore();
+
+    private void DoRestore()
     {
-        bool expired;
-        lock (_stateLock)
-        {
-            expired = _activeUntil is { } until && DateTime.UtcNow >= until;
-            if (expired)
-            {
-                _activeUntil = null;
-                _autoActive = false;
-            }
-        }
-        if (expired)
-        {
-            RestoreAll();
-            Logger.Line("guardEngine: suppression ended (time expired)");
-        }
+        _suppressor.RestoreAll();
+        _modalSkips.Clear();
+        _systemSkips.Clear();
+        _excludedSkips.Clear();
     }
 
     /// <summary>
@@ -257,7 +93,7 @@ internal sealed class GuardEngine
     public void Consider(IntPtr hwnd)
     {
         // Only act while suppression is active (enabled for a limited time from the tray).
-        if (!IsActive)
+        if (!_state.IsActive)
         {
             return;
         }
@@ -323,29 +159,7 @@ internal sealed class GuardEngine
             return;
         }
 
-        lock (_lock)
-        {
-            if (_tracked.TryGetValue(hwnd, out Tracked? known))
-            {
-                // Already tracked. It re-asserted topmost, so push it back again without extra logging.
-                SendBack(hwnd, known.Applied);
-                return;
-            }
-
-            var t = new Tracked
-            {
-                Hwnd = hwnd,
-                WasTopMost = true, // TOPMOST-only target, so always true; restored to TOPMOST later.
-                Applied = rule.Hide,
-                Process = process,
-                Title = title,
-            };
-            _tracked[hwnd] = t;
-
-            Demote(hwnd);
-            SendBack(hwnd, t.Applied);
-            Logger.Line($"guardEngine: demote: process={t.Process} title={t.Title} method={t.Applied}");
-        }
+        _suppressor.Apply(hwnd, process, title, rule.Hide);
     }
 
     private bool AnyRuleMatchesProcess(string process)
@@ -370,45 +184,6 @@ internal sealed class GuardEngine
             }
         }
         return null;
-    }
-
-    /// <summary>Reverse the hide method, then (if it was TOPMOST) restore TOPMOST. Always runs on exit/failure.</summary>
-    public void RestoreAll()
-    {
-        lock (_lock)
-        {
-            foreach (Tracked t in _tracked.Values)
-            {
-                if (!IsWindow(t.Hwnd))
-                {
-                    Logger.Line($"guardEngine: restore: process={t.Process} title={t.Title} (gone)");
-                    continue;
-                }
-
-                if (t.Applied == HideMethod.Minimize)
-                {
-                    ShowWindowAsync(t.Hwnd, SW_RESTORE);
-                }
-                else if (t.Applied == HideMethod.Hide)
-                {
-                    ShowWindowAsync(t.Hwnd, SW_SHOWNA);
-                }
-
-                if (t.WasTopMost)
-                {
-                    SetWindowPos(t.Hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
-                }
-
-                Logger.Line($"guardEngine: restore: process={t.Process} title={t.Title}");
-            }
-
-            _tracked.Clear();
-        }
-
-        _modalSkips.Clear();
-        _systemSkips.Clear();
-        _excludedSkips.Clear();
     }
 
     private static bool IsTopMost(IntPtr hwnd)
@@ -451,21 +226,4 @@ internal sealed class GuardEngine
         reason = string.Empty;
         return false;
     }
-
-    /// <summary>Clear only the topmost attribute.</summary>
-    private static bool Demote(IntPtr hwnd)
-        => SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS);
-
-    /// <summary>
-    /// Explicitly push the window to the back. HWND_NOTOPMOST only moves it to the top of the
-    /// non-topmost group, so without this the appearance would not change.
-    /// </summary>
-    private static bool SendBack(IntPtr hwnd, HideMethod method) => method switch
-    {
-        HideMethod.Minimize => ShowWindowAsync(hwnd, SW_MINIMIZE),
-        HideMethod.Hide => ShowWindowAsync(hwnd, SW_HIDE),
-        _ => SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS),
-    };
 }
