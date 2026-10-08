@@ -1,0 +1,43 @@
+name: Build and Test
+
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Run unit tests
+        run: dotnet test PopGuard.Tests/PopGuard.Tests.csproj -c Release
+
+      - name: Publish self-contained Release (no installer)
+        shell: pwsh
+        run: ./build.ps1 -SkipInstaller
+
+      - name: Zip release build
+        shell: pwsh
+        run: |
+          $publish = 'PopGuard/bin/Release/net9.0-windows10.0.22621.0/win-x64/publish'
+          if (-not (Test-Path $publish)) { throw "publisher not found: $publish" }
+          Compress-Archive -Path "$publish/*" -DestinationPath 'PopGuard-win-x64.zip' -Force
+
+      - name: Upload release zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PopGuard-win-x64
+          path: PopGuard-win-x64.zip
+          if-no-files-found: error

@@ -1,0 +1,49 @@
+name: Build Installer
+
+on:
+  push:
+    branches: [ master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Run unit tests
+        run: dotnet test PopGuard.Tests/PopGuard.Tests.csproj -c Release
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer (self-contained publish + ISCC)
+        shell: pwsh
+        run: ./build.ps1
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PopGuard-Setup
+          path: SetupOutput/*.exe
+          if-no-files-found: error
+
+      - name: Attach installer to GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: SetupOutput/*.exe
+          fail_on_unmatched_files: true
