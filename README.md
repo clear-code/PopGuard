@@ -91,7 +91,8 @@ Windows シェルのウィンドウクラスを**既定で対象外**にしま�
   いずれかが有効な間は抑止を継続、すべて解除されたときに自動解除。手動操作は常に優先（自動で始めたものだけ自動解除）。
 - **手動 DND は非対応**：`FocusSessionManager.IsFocusActive` はフォーカス セッションのみ反映し、手動の
   「応答不可」では変化しません。`SHQueryUserNotificationState`（`QUNS_QUIET_TIME`）も Win11 の新 DND を
-  反映しないため、確実に取得できる公式手段がなく非対応としています（`NotificationStateWatcher` は検証用に残置）。
+  反映しないため、確実に取得できる公式手段がなく非対応としています（`NotificationStateWatcher` は検証用で、
+  **Debug ビルドでのみ動作**します。Release ではコンパイルされず、`notification-state:` ログも出力されません）。
 
 ---
 

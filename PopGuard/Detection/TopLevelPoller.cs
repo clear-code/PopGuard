@@ -12,7 +12,9 @@ internal sealed class TopLevelPoller
 
     private readonly WindowReporter _reporter;
     private readonly GuardEngine _guardEngine;
-    private readonly NotificationStateWatcher _notifState = new(); // diagnostic: DND/quiet-time logging
+#if DEBUG
+    private readonly NotificationStateWatcher _notifState = new(); // diagnostic (Debug only): DND/quiet-time logging
+#endif
     private readonly HashSet<long> _known = new(); // only touched inside Tick, which never overlaps (see _running)
     // Referencing WinForms makes the name Timer ambiguous; be explicit about the thread-pool Timer.
     private System.Threading.Timer? _timer;
@@ -56,8 +58,10 @@ internal sealed class TopLevelPoller
             // Release/restore if the suppression expiry has passed.
             _guardEngine.CheckExpiry();
 
-            // Diagnostic: log notification-state changes (to confirm DND -> QUNS_QUIET_TIME).
+#if DEBUG
+            // Diagnostic (Debug builds only): log notification-state changes (to confirm DND -> QUNS_QUIET_TIME).
             _notifState.Poll();
+#endif
 
             List<IntPtr> current = Win32Windows.EnumerateVisibleTopLevel();
 

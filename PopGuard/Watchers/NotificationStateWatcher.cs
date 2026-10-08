@@ -1,9 +1,10 @@
+#if DEBUG
 namespace PopGuard;
 
 /// <summary>
-/// Diagnostic: polls the Windows notification state (SHQueryUserNotificationState) and logs it on
-/// change. Used to confirm whether manual "Do Not Disturb" maps to QUNS_QUIET_TIME on this machine
-/// before wiring it into auto-suppression.
+/// Diagnostic (Debug builds only): polls the Windows notification state (SHQueryUserNotificationState)
+/// and logs it on change. Used to confirm whether manual "Do Not Disturb" maps to QUNS_QUIET_TIME on
+/// this machine before wiring it into auto-suppression.
 /// </summary>
 internal sealed class NotificationStateWatcher
 {
@@ -27,3 +28,4 @@ internal sealed class NotificationStateWatcher
         }
     }
 }
+#endif
