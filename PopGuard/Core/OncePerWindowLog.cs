@@ -12,8 +12,11 @@ internal sealed class OncePerWindowLog
     private readonly object _lock = new();
     private readonly HashSet<IntPtr> _seen = new();
 
-    /// <summary>Write <paramref name="message"/> only if this handle has not been logged before.</summary>
-    public void LogOnce(IntPtr hwnd, string message)
+    /// <summary>
+    /// Write <paramref name="message"/> only if this handle has not been logged before.
+    /// Returns true if it logged (first time for this handle), false if it was suppressed as a repeat.
+    /// </summary>
+    public bool LogOnce(IntPtr hwnd, string message)
     {
         bool firstSeen;
         lock (_lock)
@@ -28,6 +31,7 @@ internal sealed class OncePerWindowLog
         {
             Logger.Line(message);
         }
+        return firstSeen;
     }
 
     public void Clear()
