@@ -1,25 +1,12 @@
 namespace PopGuard;
 
-/// <summary>The whole config (rules + duration options).</summary>
+/// <summary>The whole config (rules + duration options). Built via an object initializer so each
+/// value is set by name (the boolean options are easy to transpose positionally).</summary>
 internal sealed class AppConfig
 {
-    public IReadOnlyList<TargetRule> Rules { get; }
-    public IReadOnlyList<DurationOption> Durations { get; }
-    public bool AutoSuppressDuringFocus { get; }
-    public bool AutoSuppressDuringMicrophone { get; }
-    public bool ExcludeSystemWindows { get; }
-
-    public AppConfig(
-        IReadOnlyList<TargetRule> rules,
-        IReadOnlyList<DurationOption> durations,
-        bool autoSuppressDuringFocus,
-        bool autoSuppressDuringMicrophone,
-        bool excludeSystemWindows)
-    {
-        Rules = rules;
-        Durations = durations;
-        AutoSuppressDuringFocus = autoSuppressDuringFocus;
-        AutoSuppressDuringMicrophone = autoSuppressDuringMicrophone;
-        ExcludeSystemWindows = excludeSystemWindows;
-    }
+    public required IReadOnlyList<TargetRule> Rules { get; init; }
+    public required IReadOnlyList<DurationOption> Durations { get; init; }
+    public bool AutoSuppressDuringFocus { get; init; }
+    public bool AutoSuppressDuringMicrophone { get; init; }
+    public bool ExcludeSystemWindows { get; init; }
 }

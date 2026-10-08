@@ -24,7 +24,7 @@ internal static class RulesStore
         {
             TryWriteSample();
             Logger.Line("rules: file not found, wrote a sample. Nothing will be suppressed. path=" + FilePath);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false, true);
+            return EmptyConfig();
         }
 
         RuleFile? file;
@@ -35,7 +35,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: failed to read JSON (nothing will be suppressed): " + ex.Message);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false, true);
+            return EmptyConfig();
         }
 
         var rules = new List<TargetRule>();
@@ -70,8 +70,26 @@ internal static class RulesStore
         bool excludeSystem = file?.ExcludeSystemWindows ?? true;
 
         Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} micSync={autoMic} excludeSystem={excludeSystem} path={FilePath}");
-        return new AppConfig(rules, durations, autoFocus, autoMic, excludeSystem);
+        return new AppConfig
+        {
+            Rules = rules,
+            Durations = durations,
+            AutoSuppressDuringFocus = autoFocus,
+            AutoSuppressDuringMicrophone = autoMic,
+            ExcludeSystemWindows = excludeSystem,
+        };
     }
+
+    /// <summary>Config used when there is no file or it cannot be read: no rules (nothing suppressed),
+    /// default durations, focus sync on, mic sync off, shell windows excluded.</summary>
+    private static AppConfig EmptyConfig() => new()
+    {
+        Rules = new List<TargetRule>(),
+        Durations = DefaultDurations(),
+        AutoSuppressDuringFocus = true,
+        AutoSuppressDuringMicrophone = false,
+        ExcludeSystemWindows = true,
+    };
 
     /// <summary>Compile the duration options. Use the defaults when empty/omitted.</summary>
     private static IReadOnlyList<DurationOption> BuildDurations(List<DurationEntry>? entries)
