@@ -51,14 +51,10 @@ internal sealed class GuardEngine
     private readonly object _lock = new();
     private readonly Dictionary<IntPtr, Tracked> _tracked = new();
 
-    // HWNDs skipped as modal (recorded so we don't log the same one every tick). Guarded by _lock.
-    private readonly HashSet<IntPtr> _skippedModal = new();
-
-    // HWNDs skipped as a Windows shell window (recorded so we don't log the same one every tick). Guarded by _lock.
-    private readonly HashSet<IntPtr> _skippedSystem = new();
-
-    // HWNDs skipped by an exclusion rule (recorded so we don't log the same one every tick). Guarded by _lock.
-    private readonly HashSet<IntPtr> _skippedExcluded = new();
+    // "Skip" reasons each log a given window only once (not every tick). Each is independently synchronized.
+    private readonly OncePerWindowLog _modalSkips = new();      // skipped as a modal/dialog
+    private readonly OncePerWindowLog _systemSkips = new();     // skipped as a Windows shell window
+    private readonly OncePerWindowLog _excludedSkips = new();   // skipped by an exclusion rule
 
     // Window classes owned by the Windows shell that must never be touched. The taskbar and desktop
     // are TOPMOST, so a broad rule (e.g. process "*") would otherwise demote/hide them — on Windows 10
@@ -301,19 +297,7 @@ internal sealed class GuardEngine
         // broad rule matches. Demoting/hiding the taskbar would make it vanish (seen on Windows 10).
         if (_excludeSystemWindows && IsSystemShellWindow(className))
         {
-            bool firstSeen;
-            lock (_lock)
-            {
-                firstSeen = _skippedSystem.Add(hwnd);
-                if (_skippedSystem.Count > 256)
-                {
-                    _skippedSystem.Clear();
-                }
-            }
-            if (firstSeen)
-            {
-                Logger.Line($"guardEngine: skip: process={process} class={className} (system shell window)");
-            }
+            _systemSkips.LogOnce(hwnd, $"guardEngine: skip: process={process} class={className} (system shell window)");
             return;
         }
 
@@ -327,19 +311,7 @@ internal sealed class GuardEngine
         // above broader rules carves out exceptions.
         if (rule.Exclude)
         {
-            bool firstSeen;
-            lock (_lock)
-            {
-                firstSeen = _skippedExcluded.Add(hwnd);
-                if (_skippedExcluded.Count > 256)
-                {
-                    _skippedExcluded.Clear();
-                }
-            }
-            if (firstSeen)
-            {
-                Logger.Line($"guardEngine: skip: process={process} title={title} (excluded by rule)");
-            }
+            _excludedSkips.LogOnce(hwnd, $"guardEngine: skip: process={process} title={title} (excluded by rule)");
             return;
         }
 
@@ -347,19 +319,7 @@ internal sealed class GuardEngine
         // Err on the safe side for enterprise use: detect by behavior (owner disabled), style, and class.
         if (IsLikelyModal(hwnd, out string modalReason))
         {
-            bool firstTime;
-            lock (_lock)
-            {
-                firstTime = _skippedModal.Add(hwnd);
-                if (_skippedModal.Count > 256)
-                {
-                    _skippedModal.Clear();
-                }
-            }
-            if (firstTime)
-            {
-                Logger.Line($"guardEngine: skip: process={process} title={title} (likely dialog: {modalReason})");
-            }
+            _modalSkips.LogOnce(hwnd, $"guardEngine: skip: process={process} title={title} (likely dialog: {modalReason})");
             return;
         }
 
@@ -444,10 +404,11 @@ internal sealed class GuardEngine
             }
 
             _tracked.Clear();
-            _skippedModal.Clear();
-            _skippedSystem.Clear();
-            _skippedExcluded.Clear();
         }
+
+        _modalSkips.Clear();
+        _systemSkips.Clear();
+        _excludedSkips.Clear();
     }
 
     private static bool IsTopMost(IntPtr hwnd)
