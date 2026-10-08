@@ -35,11 +35,7 @@ internal sealed class Logger
 
     public static void Line(string message) => Shared.Log(message);
 
-    public static void Line(Exception e) => Shared.Log(e);
-
     public void Log(string message) => NoException(() => LogImpl(message));
-
-    public void Log(Exception e) => NoException(() => LogImpl(e));
 
     public Logger() : this(DefaultDirectory()) { }
 
@@ -81,15 +77,6 @@ internal sealed class Logger
             return;
         }
         Write(line);
-    }
-
-    private void LogImpl(Exception e)
-    {
-        if (!EnableLogging)
-        {
-            return;
-        }
-        LogImpl(e.ToString());
     }
 
     private void Write(string line)
