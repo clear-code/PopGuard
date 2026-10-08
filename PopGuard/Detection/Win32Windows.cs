@@ -40,6 +40,12 @@ internal static class Win32Windows
     public static string ProcessName(IntPtr hwnd)
     {
         NativeMethods.GetWindowThreadProcessId(hwnd, out uint pid);
+        return ProcessName((int)pid);
+    }
+
+    /// <summary>Process name for a known process id (callers that already have the pid).</summary>
+    public static string ProcessName(int pid)
+    {
         if (pid == 0)
         {
             return string.Empty;
@@ -47,7 +53,7 @@ internal static class Win32Windows
 
         try
         {
-            using var proc = Process.GetProcessById((int)pid);
+            using var proc = Process.GetProcessById(pid);
             return proc.ProcessName;
         }
         catch
@@ -67,5 +73,12 @@ internal static class Win32Windows
         var sb = new StringBuilder(len + 2);
         NativeMethods.GetWindowText(hwnd, sb, sb.Capacity);
         return sb.ToString();
+    }
+
+    public static string ClassName(IntPtr hwnd)
+    {
+        var sb = new StringBuilder(256);
+        int n = NativeMethods.GetClassName(hwnd, sb, sb.Capacity);
+        return n > 0 ? sb.ToString() : string.Empty;
     }
 }

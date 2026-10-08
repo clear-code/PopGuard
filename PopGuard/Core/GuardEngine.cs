@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using static PopGuard.NativeMethods;
 
 namespace PopGuard;
@@ -289,14 +288,14 @@ internal sealed class GuardEngine
         }
 
         // First narrow candidates by the cheap process name (title lookup is costly, so defer it).
-        string process = ProcessName((int)pid);
+        string process = Win32Windows.ProcessName((int)pid);
         if (!AnyRuleMatchesProcess(process))
         {
             return;
         }
 
-        string className = ClassName(hwnd);
-        string title = Title(hwnd);
+        string className = Win32Windows.ClassName(hwnd);
+        string title = Win32Windows.Title(hwnd);
 
         // Never touch the Windows shell's own windows (taskbar, desktop, tray overflow), even when a
         // broad rule matches. Demoting/hiding the taskbar would make it vanish (seen on Windows 10).
@@ -482,7 +481,7 @@ internal sealed class GuardEngine
             return true;
         }
 
-        if (ClassName(hwnd) == "#32770")
+        if (Win32Windows.ClassName(hwnd) == "#32770")
         {
             reason = "standard dialog class (#32770)";
             return true;
@@ -508,37 +507,4 @@ internal sealed class GuardEngine
         _ => SetWindowPos(hwnd, HWND_BOTTOM, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS),
     };
-
-    private static string ProcessName(int pid)
-    {
-        try
-        {
-            using var proc = Process.GetProcessById(pid);
-            return proc.ProcessName;
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
-
-    private static string Title(IntPtr hwnd)
-    {
-        int len = GetWindowTextLength(hwnd);
-        if (len <= 0)
-        {
-            return string.Empty;
-        }
-
-        var sb = new StringBuilder(len + 2);
-        GetWindowText(hwnd, sb, sb.Capacity);
-        return sb.ToString();
-    }
-
-    private static string ClassName(IntPtr hwnd)
-    {
-        var sb = new StringBuilder(256);
-        int n = NativeMethods.GetClassName(hwnd, sb, sb.Capacity);
-        return n > 0 ? sb.ToString() : string.Empty;
-    }
 }
