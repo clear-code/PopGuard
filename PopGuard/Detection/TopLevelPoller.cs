@@ -13,9 +13,10 @@ internal sealed class TopLevelPoller
     private readonly WindowReporter _reporter;
     private readonly GuardEngine _guard;
     private readonly NotificationStateWatcher _notifState = new(); // diagnostic: DND/quiet-time logging
-    private readonly HashSet<long> _known = new(); // single timer callback, so no locking needed
+    private readonly HashSet<long> _known = new(); // only touched inside Tick, which never overlaps (see _running)
     // Referencing WinForms makes the name Timer ambiguous; be explicit about the thread-pool Timer.
     private System.Threading.Timer? _timer;
+    private int _running; // 1 while a tick is in progress; prevents overlapping callbacks
 
     public TopLevelPoller(WindowReporter reporter, GuardEngine guard)
     {
@@ -42,6 +43,14 @@ internal sealed class TopLevelPoller
 
     private void Tick()
     {
+        // System.Threading.Timer does not prevent reentrancy: if one tick runs longer than the
+        // interval, the next would start on another thread. Skip overlapping ticks so _known and
+        // the watchers are only ever touched by a single thread at a time.
+        if (Interlocked.Exchange(ref _running, 1) == 1)
+        {
+            return;
+        }
+
         try
         {
             // Release/restore if the suppression expiry has passed.
@@ -74,6 +83,10 @@ internal sealed class TopLevelPoller
         catch
         {
             // Skip this round on enumeration failure.
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _running, 0);
         }
     }
 }

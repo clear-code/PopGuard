@@ -26,6 +26,7 @@ internal sealed class MicrophoneWatcher
 
     private System.Threading.Timer? _timer;
     private bool _lastInUse;
+    private int _polling; // 1 while a poll is in progress; prevents overlapping callbacks
 
     /// <summary>Effective state after <see cref="Start"/>, for display. Microphone detection works on
     /// every supported OS, so this is simply On when enabled by config, otherwise Off.</summary>
@@ -67,6 +68,13 @@ internal sealed class MicrophoneWatcher
 
     private void Poll()
     {
+        // System.Threading.Timer does not prevent reentrancy; skip overlapping polls so _lastInUse
+        // is only touched by one thread at a time.
+        if (Interlocked.Exchange(ref _polling, 1) == 1)
+        {
+            return;
+        }
+
         try
         {
             bool inUse = IsMicrophoneInUse();
@@ -83,6 +91,10 @@ internal sealed class MicrophoneWatcher
         {
             // Never let a transient registry read failure take down the timer thread.
             Logger.Line("mic-watch: poll failed: " + ex.Message);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _polling, 0);
         }
     }
 
