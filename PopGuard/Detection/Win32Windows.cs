@@ -9,6 +9,14 @@ namespace PopGuard;
 /// </summary>
 internal static class Win32Windows
 {
+    // A top-level window smaller than this (in pixels) is treated as an auxiliary/hidden helper
+    // window and not reported.
+    private const int MinReasonableWidth = 40;
+    private const int MinReasonableHeight = 20;
+
+    // Win32 window class names are at most 256 characters.
+    private const int MaxClassNameLength = 256;
+
     /// <summary>Enumerate the handles of visible top-level windows.</summary>
     public static List<IntPtr> EnumerateVisibleTopLevel()
     {
@@ -34,7 +42,7 @@ internal static class Win32Windows
         {
             return false;
         }
-        return (r.Right - r.Left) >= 40 && (r.Bottom - r.Top) >= 20;
+        return (r.Right - r.Left) >= MinReasonableWidth && (r.Bottom - r.Top) >= MinReasonableHeight;
     }
 
     public static string ProcessName(IntPtr hwnd)
@@ -77,7 +85,7 @@ internal static class Win32Windows
 
     public static string ClassName(IntPtr hwnd)
     {
-        var sb = new StringBuilder(256);
+        var sb = new StringBuilder(MaxClassNameLength);
         int n = NativeMethods.GetClassName(hwnd, sb, sb.Capacity);
         return n > 0 ? sb.ToString() : string.Empty;
     }
