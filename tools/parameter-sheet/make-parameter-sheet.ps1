@@ -286,6 +286,8 @@ try {
             -Note 'Windows 11 のフォーカス セッション中だけ自動で抑止します。手動の「応答不可」は対象外です'),
         (New-Param -Label 'マイク使用中は自動で抑止する' -Value '無効' -Name 'AutoSuppressDuringMicrophone' -Kind bool `
             -Note '通話や Web 会議などでマイクが使われている間だけ自動で抑止します（既定は無効）'),
+        (New-Param -Label 'システムウィンドウを常に除外する' -Value '有効' -Name 'ExcludeSystemWindows' -Kind bool `
+            -Note 'タスクバーやデスクトップなど Windows シェルのウィンドウを抑止対象から常に外します（既定は有効。通常は変更不要）'),
         (New-Param -Label '表示言語' -Value '自動' -Name 'Language' -Kind choice -Choices @('自動', '日本語', '英語') `
             -Note '「自動」は OS の表示言語に従います (日本語以外は英語)')
     ) | Out-Null

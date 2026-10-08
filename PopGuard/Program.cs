@@ -8,7 +8,7 @@ internal static class Program
     private static void Main()
     {
         AppConfig config = RulesStore.Load();
-        var engine = new GuardEngine(config.Rules);
+        var engine = new GuardEngine(config.Rules, config.ExcludeSystemWindows);
 
         // Always restore pushed-back windows on failure/exit so none are left behind.
         AppDomain.CurrentDomain.UnhandledException += (_, _) =>

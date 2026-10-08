@@ -100,6 +100,7 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
   ],
   "autoSuppressDuringFocus": true,
   "autoSuppressDuringMicrophone": false,
+  "excludeSystemWindows": true,
   "language": "auto"
 }
 ```
@@ -129,8 +130,8 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 * `hide` の値の意味: `Bottom`＝背面へ送る（既定）、`Minimize`＝最小化、`Hide`＝非表示（`exclude` のときは無視）。
 * 対象になるのは最前面のウィンドウだけです。モーダルダイアログ（応答するまで操作をブロックするもの）は、
   安全のため対象外です。
-* タスクバーやデスクトップなど **Windows シェルのウィンドウは常に対象外**です。`process` に `*` を指定しても
-  これらは抑止されません（タスクバーが消えることはありません）。
+* タスクバーやデスクトップなど **Windows シェルのウィンドウは既定で対象外**です。`process` に `*` を指定しても
+  これらは抑止されません（タスクバーが消えることはありません）。この挙動は `excludeSystemWindows` で切り替えできます（下記）。
 
 ## durations（抑止時間の候補）
 
@@ -173,7 +174,15 @@ PopGuardは**起動時に一度だけ**読み込みます。変更後はPopGuard
 * フォーカス セッション連動とマイク連動の両方が有効な場合、**どちらかが有効な間は抑止が継続**し、
   両方が解除されたときに自動で解除されます。
 
-## language（表示言語）
+## excludeSystemWindows
+
+`true`（既定）で、タスクバーやデスクトップなど **Windows シェルのウィンドウを常に抑止対象外**にします。
+これにより、`process` に `*` を指定した場合でもタスクバーが消えることはありません。
+
+* 対象クラス：`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`（タスクバー）、`Progman` / `WorkerW`（デスクトップ）、
+  `NotifyIconOverflowWindow`（通知領域のあふれ）。
+* `false` にすると、この自動除外を無効化します。**通常は既定の `true` のままにしてください**
+  （`false` にすると広いルールがタスクバー等を巻き込む恐れがあります）。
 
 トレイメニューや状態表示の言語です。
 

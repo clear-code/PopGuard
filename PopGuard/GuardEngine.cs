@@ -47,6 +47,7 @@ internal sealed class GuardEngine
     }
 
     private readonly IReadOnlyList<TargetRule> _rules;
+    private readonly bool _excludeSystemWindows;
     private readonly int _ownPid = Process.GetCurrentProcess().Id;
     private readonly object _lock = new();
     private readonly Dictionary<IntPtr, Tracked> _tracked = new();
@@ -82,7 +83,11 @@ internal sealed class GuardEngine
     // watchers' on/off events; suppression is auto-released only once every source is off. Guarded by _stateLock.
     private readonly HashSet<AutoSource> _autoSources = new();
 
-    public GuardEngine(IReadOnlyList<TargetRule> rules) => _rules = rules;
+    public GuardEngine(IReadOnlyList<TargetRule> rules, bool excludeSystemWindows = true)
+    {
+        _rules = rules;
+        _excludeSystemWindows = excludeSystemWindows;
+    }
 
     /// <summary>Whether suppression is currently active.</summary>
     public bool IsActive
@@ -295,7 +300,7 @@ internal sealed class GuardEngine
 
         // Never touch the Windows shell's own windows (taskbar, desktop, tray overflow), even when a
         // broad rule matches. Demoting/hiding the taskbar would make it vanish (seen on Windows 10).
-        if (IsSystemShellWindow(className))
+        if (_excludeSystemWindows && IsSystemShellWindow(className))
         {
             bool firstSeen;
             lock (_lock)

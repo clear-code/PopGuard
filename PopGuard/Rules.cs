@@ -22,6 +22,9 @@ internal sealed class RuleFile
     // Whether to auto-suppress while the microphone is in use, e.g. during a call/meeting (default true).
     public bool? AutoSuppressDuringMicrophone { get; set; }
 
+    // Whether to always exclude Windows shell windows (taskbar, desktop, …) from suppression (default true).
+    public bool? ExcludeSystemWindows { get; set; }
+
     // Display language: "auto" (default, follow the OS UI language) / "ja" / "en".
     public string? Language { get; set; }
 }
@@ -160,17 +163,20 @@ internal sealed class AppConfig
     public IReadOnlyList<DurationOption> Durations { get; }
     public bool AutoSuppressDuringFocus { get; }
     public bool AutoSuppressDuringMicrophone { get; }
+    public bool ExcludeSystemWindows { get; }
 
     public AppConfig(
         IReadOnlyList<TargetRule> rules,
         IReadOnlyList<DurationOption> durations,
         bool autoSuppressDuringFocus,
-        bool autoSuppressDuringMicrophone)
+        bool autoSuppressDuringMicrophone,
+        bool excludeSystemWindows)
     {
         Rules = rules;
         Durations = durations;
         AutoSuppressDuringFocus = autoSuppressDuringFocus;
         AutoSuppressDuringMicrophone = autoSuppressDuringMicrophone;
+        ExcludeSystemWindows = excludeSystemWindows;
     }
 }
 
@@ -342,7 +348,7 @@ internal static class RulesStore
         {
             TryWriteSample();
             Logger.Line("rules: file not found, wrote a sample. Nothing will be suppressed. path=" + FilePath);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false, true);
         }
 
         RuleFile? file;
@@ -353,7 +359,7 @@ internal static class RulesStore
         catch (Exception ex)
         {
             Logger.Line("rules: failed to read JSON (nothing will be suppressed): " + ex.Message);
-            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false);
+            return new AppConfig(new List<TargetRule>(), DefaultDurations(), true, false, true);
         }
 
         var rules = new List<TargetRule>();
@@ -385,9 +391,10 @@ internal static class RulesStore
         IReadOnlyList<DurationOption> durations = BuildDurations(file?.Durations);
         bool autoFocus = file?.AutoSuppressDuringFocus ?? true;
         bool autoMic = file?.AutoSuppressDuringMicrophone ?? false;
+        bool excludeSystem = file?.ExcludeSystemWindows ?? true;
 
-        Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} micSync={autoMic} path={FilePath}");
-        return new AppConfig(rules, durations, autoFocus, autoMic);
+        Logger.Line($"rules: enabled={rules.Count} invalid={invalid} disabled={disabled} durations={durations.Count} focusSync={autoFocus} micSync={autoMic} excludeSystem={excludeSystem} path={FilePath}");
+        return new AppConfig(rules, durations, autoFocus, autoMic, excludeSystem);
     }
 
     /// <summary>Compile the duration options. Use the defaults when empty/omitted.</summary>
@@ -490,6 +497,8 @@ internal static class RulesStore
                 AutoSuppressDuringFocus = true,
                 // Auto-suppress while the microphone is in use (e.g. during a call/meeting). Default off.
                 AutoSuppressDuringMicrophone = false,
+                // Always exclude Windows shell windows (taskbar, desktop, …) from suppression.
+                ExcludeSystemWindows = true,
                 // Display language: "auto" (follow the OS UI language) / "ja" / "en".
                 Language = "auto",
             };

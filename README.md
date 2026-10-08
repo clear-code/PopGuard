@@ -64,9 +64,10 @@ PopGuard は、作業中に割り込んでくる**最前面（TOPMOST）のポ�
 ### システムウィンドウ除外
 
 タスクバーなども TOPMOST のため、広いルール（例 `process: "*"`）でも巻き込まれないよう、
-Windows シェルのウィンドウクラスを**常に対象外**にします。
+Windows シェルのウィンドウクラスを**既定で対象外**にします。
 対象クラス：`Shell_TrayWnd` / `Shell_SecondaryTrayWnd`（タスクバー）、`Progman` / `WorkerW`（デスクトップ）、
 `NotifyIconOverflowWindow`（通知領域のあふれ）。`GuardEngine.IsSystemShellWindow` で判定。
+設定 `excludeSystemWindows`（既定 true）で有効・無効を切り替え可能（通常は変更不要）。
 
 ### 復元
 
@@ -119,6 +120,7 @@ Windows シェルのウィンドウクラスを**常に対象外**にします�
   ],
   "autoSuppressDuringFocus": true,
   "autoSuppressDuringMicrophone": false,
+  "excludeSystemWindows": true,
   "language": "auto"
 }
 ```
@@ -134,6 +136,7 @@ Windows シェルのウィンドウクラスを**常に対象外**にします�
   自動生成。`durations` 省略時は既定候補（30分/1時間/2時間/一日/無制限、言語連動）。
 - `autoSuppressDuringFocus`：フォーカス セッション連動（既定 true）。
 - `autoSuppressDuringMicrophone`：マイク使用中（通話・Web 会議など）の連動（既定 false）。
+- `excludeSystemWindows`：タスクバー等の Windows シェルウィンドウを常に抑止対象外にする（既定 true）。
 - `language`：`auto` / `ja` / `en`。
 
 生成支援として `tools/parameter-sheet/`（Excel パラメータシート）があります。

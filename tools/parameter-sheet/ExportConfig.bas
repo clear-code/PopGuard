@@ -83,6 +83,7 @@ Public Function BuildJson() As String
     s = s & BuildDurations() & "," & vbCrLf
     s = s & "  ""autoSuppressDuringFocus"": " & JBool(ParamBool("T_General", "AutoSuppressDuringFocus")) & "," & vbCrLf
     s = s & "  ""autoSuppressDuringMicrophone"": " & JBool(ParamBool("T_General", "AutoSuppressDuringMicrophone")) & "," & vbCrLf
+    s = s & "  ""excludeSystemWindows"": " & JBool(ParamBoolDefault("T_General", "ExcludeSystemWindows", True)) & "," & vbCrLf
     s = s & "  ""language"": " & JStr(LanguageValue(ParamText("T_General", "Language"))) & vbCrLf
     s = s & "}" & vbCrLf
 
@@ -274,6 +275,19 @@ End Function
 
 Private Function ParamBool(ByVal tableName As String, ByVal paramName As String) As Boolean
     ParamBool = (ParamText(tableName, paramName) = VALUE_YES)
+End Function
+
+' 空欄のときは default を返す bool パラメータ。「有効」で真、それ以外（「無効」等）で偽。
+Private Function ParamBoolDefault(ByVal tableName As String, ByVal paramName As String, _
+                                  ByVal defaultValue As Boolean) As Boolean
+    Dim t As String
+
+    t = ParamText(tableName, paramName)
+    If t = "" Then
+        ParamBoolDefault = defaultValue
+    Else
+        ParamBoolDefault = (t = VALUE_YES)
+    End If
 End Function
 
 ' どこか 1 つでも埋まっている行の番号。keyCol が 0 なら全列を見る。
